@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stelutele lui Eve</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh}
+.app{max-width:440px;margin:0 auto;padding:0 0 60px}
+
+.header{background:#fff;border-bottom:1px solid #ebe9e0;padding:18px 16px 14px;text-align:center;position:sticky;top:0;z-index:10}
+.avatar{width:52px;height:52px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 6px}
+.child-name{font-size:14px;font-weight:600;color:#3C3489}
+.star-num{font-size:44px;font-weight:700;color:#534AB7;line-height:1.1;margin:6px 0 2px}
+.money-pill{display:inline-block;background:#EAF3DE;color:#27500A;border-radius:20px;padding:3px 14px;font-size:13px;font-weight:600}
+
+.levels{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 12px}
+.lv{background:#fff;border:1px solid #ebe9e0;border-radius:10px;padding:8px 8px 7px;text-align:center}
+.lv-title{font-size:10px;font-weight:600;color:#888;letter-spacing:.04em;margin-bottom:4px}
+.lv-val{font-size:14px;font-weight:700;margin-bottom:3px}
+.lv-bar-wrap{background:#f0efe8;border-radius:3px;height:5px}
+.lv-bar{height:5px;border-radius:3px;transition:width .4s}
+.lv-sub{font-size:10px;color:#aaa;margin-top:3px}
+
+.tabs{display:flex;gap:6px;padding:0 12px 8px}
+.tab{flex:1;background:#fff;border:1px solid #ebe9e0;border-radius:8px;padding:7px 4px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;color:#888;transition:all .15s}
+.tab.active{background:#EEEDFE;border-color:#AFA9EC;color:#3C3489}
+
+.panel{display:none;padding:0 12px}.panel.active{display:block}
+.group-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:10px 0 6px;display:flex;align-items:center;gap:6px}
+
+.tasks-list{display:flex;flex-direction:column;gap:5px}
+.task-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #ebe9e0;border-radius:10px;padding:9px 11px;cursor:pointer;transition:all .15s;width:100%;text-align:left}
+.task-row:hover{border-color:#AFA9EC;background:#EEEDFE}
+.task-row.done{background:#EAF3DE;border-color:#97C459}
+.task-dot{width:18px;height:18px;border-radius:50%;border:1.5px solid #d0cec8;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.task-row.done .task-dot{background:#3B6D11;border-color:#3B6D11;color:#fff}
+.task-text{flex:1;font-size:12px;font-weight:500;color:#1a1a1a;line-height:1.3}
+.task-row.done .task-text{color:#27500A}
+.task-pts{font-size:11px;font-weight:600;color:#aaa;flex-shrink:0}
+.task-row.done .task-pts{color:#3B6D11}
+
+.bonus-strip{border-radius:10px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:10px}
+.bonus-strip.b1{background:#EAF3DE}
+.bonus-strip.b2{background:#EEEDFE}
+.bonus-strip.b1.earned{border:1.5px solid #97C459}
+.bonus-strip.b2.earned{border:1.5px solid #AFA9EC}
+.bonus-left{flex:1}
+.bonus-name{font-size:12px;font-weight:700}
+.bonus-strip.b1 .bonus-name{color:#27500A}
+.bonus-strip.b2 .bonus-name{color:#3C3489}
+.bonus-desc{font-size:11px;margin-top:1px}
+.bonus-strip.b1 .bonus-desc{color:#3B6D11}
+.bonus-strip.b2 .bonus-desc{color:#534AB7}
+.bonus-prog{display:flex;align-items:center;gap:6px;margin-top:5px}
+.bonus-bar-wrap{flex:1;background:rgba(0,0,0,0.08);border-radius:3px;height:4px}
+.bonus-bar{height:4px;border-radius:3px;transition:width .4s}
+.bonus-strip.b1 .bonus-bar{background:#3B6D11}
+.bonus-strip.b2 .bonus-bar{background:#534AB7}
+.bonus-count{font-size:10px;font-weight:600;flex-shrink:0}
+.bonus-strip.b1 .bonus-count{color:#3B6D11}
+.bonus-strip.b2 .bonus-count{color:#534AB7}
+.bonus-badge{background:#fff;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap}
+.bonus-strip.b1 .bonus-badge{color:#27500A}
+.bonus-strip.b2 .bonus-badge{color:#3C3489}
+
+.day-btn{width:100%;margin-top:10px;background:#fff;border:1px solid #ebe9e0;border-radius:9px;padding:9px;font-size:12px;cursor:pointer;color:#888;font-weight:500;transition:all .15s}
+.day-btn:hover{background:#f0efe8}
+
+.rewards-list{display:flex;flex-direction:column;gap:6px}
+.reward-row{display:flex;align-items:center;background:#fff;border:1px solid #ebe9e0;border-radius:11px;padding:9px 11px;gap:9px}
+.reward-icon{font-size:20px;width:30px;text-align:center;flex-shrink:0}
+.reward-info{flex:1;min-width:0}
+.reward-tag{font-size:10px;padding:1px 7px;border-radius:8px;display:inline-block;margin-bottom:2px;font-weight:600}
+.tag-timp{background:#E1F5EE;color:#085041}
+.tag-bani{background:#EAF3DE;color:#27500A}
+.tag-special{background:#FBEAF0;color:#72243E}
+.reward-name{font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.3}
+.reward-cost{font-size:11px;color:#aaa;margin-top:1px}
+.reward-block-msg{font-size:10px;color:#D85A30;margin-top:2px;font-weight:600}
+.redeem-btn{background:#EEEDFE;border:1px solid #AFA9EC;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;color:#3C3489;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.redeem-btn:disabled{opacity:.35;cursor:not-allowed;background:#f5f4f0;border-color:#ebe9e0;color:#888}
+.redeem-btn.blk{background:#FEF3E2;border-color:#FAC775;color:#854F0B;cursor:not-allowed;opacity:.8}
+.redeem-btn:not(:disabled):not(.blk):hover{background:#CECBF6}
+
+.hist-list{display:flex;flex-direction:column}
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid #f0efe8}
+.hist-row:last-child{border-bottom:none}
+.hist-left{display:flex;flex-direction:column;gap:1px}
+.hist-desc{font-size:12px;color:#1a1a1a}
+.hist-time{font-size:10px;color:#bbb}
+.hist-pts{font-size:13px;font-weight:700}
+.hist-pts.plus{color:#3B6D11}.hist-pts.minus{color:#993C1D}.hist-pts.zero{color:#aaa}
+.empty-state{text-align:center;padding:28px 0;font-size:13px;color:#bbb}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.stat-card{background:#fff;border:1px solid #ebe9e0;border-radius:11px;padding:11px;text-align:center}
+.stat-num{font-size:22px;font-weight:700}
+.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+
+.limit-warn{background:#FAEEDA;border:1px solid #FAC775;border-radius:9px;padding:7px 11px;font-size:11px;color:#633806;margin-bottom:8px;display:none}
+.limit-warn.show{display:block}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:#2C2C2A;color:#F1EFE8;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="avatar">&#11088;</div>
+    <div class="child-name">Stelutele lui Eve</div>
+    <div class="star-num" id="totalStars">0</div>
+    <div style="font-size:12px;color:#aaa;margin-bottom:4px">stele acumulate (se reporteaza mereu &#8594;)</div>
+    <div class="money-pill" id="moneyPill">= 0.00 RON</div>
+  </div>
+
+  <!-- NIVELURI LUNARE -->
+  <div class="levels">
+    <div class="lv">
+      <div class="lv-title">NIVEL 1</div>
+      <div class="lv-val" style="color:#3B6D11" id="lv1val">0 RON</div>
+      <div class="lv-bar-wrap"><div class="lv-bar" id="lv1bar" style="width:0%;background:#639922"></div></div>
+      <div class="lv-sub">max 100 RON/luna</div>
+    </div>
+    <div class="lv">
+      <div class="lv-title">+ BONUS 1</div>
+      <div class="lv-val" style="color:#854F0B" id="lv2val">0 RON</div>
+      <div class="lv-bar-wrap"><div class="lv-bar" id="lv2bar" style="width:0%;background:#EF9F27"></div></div>
+      <div class="lv-sub">max 150 RON/luna</div>
+    </div>
+    <div class="lv">
+      <div class="lv-title">+ BONUS 2</div>
+      <div class="lv-val" style="color:#3C3489" id="lv3val">0 RON</div>
+      <div class="lv-bar-wrap"><div class="lv-bar" id="lv3bar" style="width:0%;background:#534AB7"></div></div>
+      <div class="lv-sub">max 220 RON/luna</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('sarcini')">&#128203; Sarcini</div>
+    <div class="tab" onclick="switchTab('recompense')">&#127873; Recompense</div>
+    <div class="tab" onclick="switchTab('istoric')">&#128200; Istoric</div>
+  </div>
+
+  <!-- TAB SARCINI -->
+  <div id="tab-sarcini" class="panel active">
+
+    <div class="group-label" style="color:#3B6D11">
+      <span>&#9679;</span> Rutina zilnica
+    </div>
+    <div class="tasks-list" id="tasksGrid1"></div>
+    <div class="bonus-strip b1" id="bonusStrip1">
+      <div class="bonus-left">
+        <div class="bonus-name">&#127942; Bonus Rutina</div>
+        <div class="bonus-prog">
+          <div class="bonus-bar-wrap"><div class="bonus-bar" id="bonusBar1" style="width:0%"></div></div>
+          <div class="bonus-count" id="bonusCount1">0/6</div>
+        </div>
+        <div class="bonus-desc" id="bonusDesc1">Completeaza toate pentru +9 stele/zi (spre 150 RON/luna)</div>
+      </div>
+      <div class="bonus-badge" id="bonusBadge1">+9 &#11088;</div>
+    </div>
+
+    <div class="group-label" style="color:#3C3489;margin-top:14px">
+      <span>&#9679;</span> Comportament
+    </div>
+    <div class="tasks-list" id="tasksGrid2"></div>
+    <div class="bonus-strip b2" id="bonusStrip2">
+      <div class="bonus-left">
+        <div class="bonus-name">&#127942; Bonus Comportament</div>
+        <div class="bonus-prog">
+          <div class="bonus-bar-wrap"><div class="bonus-bar" id="bonusBar2" style="width:0%"></div></div>
+          <div class="bonus-count" id="bonusCount2">0/7</div>
+        </div>
+        <div class="bonus-desc" id="bonusDesc2">Completeaza toate pentru +12 stele/zi (spre 220 RON/luna)</div>
+      </div>
+      <div class="bonus-badge" id="bonusBadge2">+12 &#11088;</div>
+    </div>
+
+    <button class="day-btn" onclick="resetDay()">&#8635; Incepe o zi noua</button>
+  </div>
+
+  <!-- TAB RECOMPENSE -->
+  <div id="tab-recompense" class="panel">
+    <div class="limit-warn" id="limitWarn"></div>
+    <div class="section-lbl" style="font-size:11px;font-weight:700;color:#888;letter-spacing:.05em;text-transform:uppercase;margin:8px 0 7px">Ce pot castiga</div>
+    <div class="rewards-list" id="rewardsList"></div>
+    <div style="font-size:11px;color:#bbb;text-align:center;margin-top:10px">1 stea = 0.10 RON</div>
+  </div>
+
+  <!-- TAB ISTORIC -->
+  <div id="tab-istoric" class="panel">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" style="color:#3B6D11" id="statCastigat">0</div>
+        <div class="stat-lbl">stele castigate luna</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:#993556" id="statCheltuit">0</div>
+        <div class="stat-lbl">stele folosite luna</div>
+      </div>
+    </div>
+    <div class="stats-grid" style="margin-bottom:4px">
+      <div class="stat-card" style="grid-column:1/-1;background:#EEEDFE;border-color:#AFA9EC">
+        <div class="stat-num" style="color:#534AB7" id="statTotal">0</div>
+        <div class="stat-lbl" style="color:#3C3489">&#8594; stele totale disponibile (reportate din toate perioadele)</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:.05em;text-transform:uppercase;margin:4px 0 8px">Activitate recenta</div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STAR_VAL = 0.10;
+
+// 1 stea = 0.10 RON
+// Max stele/zi: TASKS1(20) + BONUS1(9) + TASKS2(32) + BONUS2(12) = 73 stele/zi
+// Max stele/luna (30 zile): 73 x 30 = 2.190 stele = 219 RON
+// Nivel 1 (cash): max 100 RON = 1000 stele
+// Nivel 2 (cu Bonus Rutina): max 150 RON = 1500 stele
+// Nivel 3 (cu ambele bonusuri): max 220 RON = 2200 stele
+const MAX_LV1 = 1000;
+const MAX_LV2 = 1500;
+const MAX_LV3 = 2200;
+
+// BONUS 1 — Rutina zilnica
+// 6 sarcini x medie ~2.3 stele = ~14 stele/zi din sarcini
+// + 6 bonus/zi = 20/zi -> ~600 stele/luna -> 60 RON
+// Cu variatii bune: spre 80-100 RON din sarcini + bonus dus la 150 RON total
+// =============================================
+// CALCUL STELE
+// Recompense maxime/zi:
+//   - 2x tableta sapt (2x10=20) + 2x desene (2x15=30) + 1x dulce (8) = 58 stele/zi
+// Recompense maxime/sapt suplimentare:
+//   - MC 1x/sapt = 70 stele
+//   - Parc 3x/sapt = 3x30 = 90 stele
+//   => 160 stele/sapt extra / 7 zile = ~23 stele/zi extra
+// Total necesar/zi: 58 + 23 = ~81 stele
+// => TASKS1: 3+4+3+3+3+3=19 + BONUS1=9 = 28/zi
+//    TASKS2: 3+3+5+5+7+5+3=31 + BONUS2=12 = 43/zi (weekend tab:2x18=36 in loc de 2x10=20, dif=16 acoperita)
+//    TOTAL: 28+43 = 71/zi (suficient pentru zilele de saptamana, weekend are tableta mai ieftina)
+// Weekend: inlocuieste 2x tab15(20) cu 2x tab30(36) -> diferenta +16, dar tab30 costa mai mult -> echilibrat
+// =============================================
+
+const TASKS1 = [
+  {id:'mancat',     name:'Am mancat tot din farfurie',      pts:4},
+  {id:'jucarii',    name:'Mi-am strans jucariile',          pts:4},
+  {id:'imbracat',   name:'M-am imbracat singura',           pts:3},
+  {id:'dinti_dim',  name:'Mi-am spalat dintii dimineata',   pts:3},
+  {id:'dinti_sea',  name:'Mi-am spalat dintii seara',       pts:3},
+  {id:'dormit_ora', name:'Am dormit la ora mea',            pts:3},
+];
+const BONUS1 = 9;
+
+const TASKS2 = [
+  {id:'trezit',     name:'M-am trezit fara plans',              pts:3},
+  {id:'pijama',     name:'Mi-am aranjat pijamaua',               pts:3},
+  {id:'ascultat',   name:'Am ascultat din prima',                pts:5},
+  {id:'ajutat',     name:'Am ajutat fara sa fiu rugata',         pts:5},
+  {id:'dormit_cam', name:'Am dormit singura in camera mea',      pts:8},
+  {id:'sters',      name:'Am sters ce am murdarit',              pts:5},
+  {id:'salutat',    name:'Am salutat cand am ajuns undeva',      pts:3},
+];
+const BONUS2 = 12;
+
+const REWARDS = [
+  // TIMP EXTRA
+  // Tableta sapt: max 30 min/zi (2 x 15 min). Pret: 10 stele = 1 RON (abordabil zilnic)
+  {id:'tab15',   icon:'&#128241;', name:'+15 min tableta (zi saptamana)', pts:10,  type:'timp',    cashOnly:false, dailyLimit:2,  weeklyLimit:null, limitKey:'tab15'},
+  // Tableta weekend: max 60 min/zi (2 x 30 min). Pret: 18 stele
+  {id:'tab30',   icon:'&#128241;', name:'+30 min tableta (zi weekend)',   pts:18,  type:'timp',    cashOnly:false, dailyLimit:2,  weeklyLimit:null, limitKey:'tab30'},
+  // Desene: max 60 min/zi (2 x 30 min). Pret: 15 stele
+  {id:'tv30',    icon:'&#128250;', name:'+30 min desene',                 pts:15,  type:'timp',    cashOnly:false, dailyLimit:2,  weeklyLimit:null, limitKey:'tv30'},
+  // Dulciurica: max 1/zi. Pret: 8 stele
+  {id:'dulce',   icon:'&#127852;', name:'O dulciurica',                   pts:8,   type:'special', cashOnly:false, dailyLimit:1,  weeklyLimit:null, limitKey:'dulce'},
+  // BANI
+  {id:'bani5',   icon:'&#128176;', name:'5 RON in pusculita',             pts:50,  type:'bani',    cashOnly:true,  dailyLimit:null, weeklyLimit:null, limitKey:'bani5'},
+  {id:'bani10',  icon:'&#128176;', name:'10 RON in pusculita',            pts:100, type:'bani',    cashOnly:true,  dailyLimit:null, weeklyLimit:null, limitKey:'bani10'},
+  // IESIRI
+  // MC: max 1/sapt. Pret: 70 stele
+  {id:'mc',      icon:'&#127828;', name:'Iesire la McDonalds',            pts:70,  type:'special', cashOnly:false, dailyLimit:null, weeklyLimit:1,   limitKey:'mc'},
+  // Parc: max 3/sapt. Pret: 30 stele
+  {id:'parc',    icon:'&#127956;', name:'Iesire in parc',                 pts:30,  type:'special', cashOnly:false, dailyLimit:null, weeklyLimit:3,   limitKey:'parc'},
+];
+const TAG_LABELS = {timp:'Timp extra', bani:'Bani', special:'Iesire / Surpriza'};
+
+function getMonthKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}`}
+function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
+function getWeekKey(){const d=new Date();const jan=new Date(d.getFullYear(),0,1);const w=Math.ceil(((d-jan)/86400000+jan.getDay()+1)/7);return `${d.getFullYear()}-W${w}`}
+
+let state = {
+  stars: 0,
+  done: {},
+  history: [],
+  spentLv1: 0,
+  spentTotal: 0,
+  earnedMonth: 0,
+  spentMonth: 0,
+  bonus1Given: false,
+  bonus2Given: false,
+  monthKey: getMonthKey(),
+  todayKey: getTodayKey(),
+  weekKey: getWeekKey(),
+  dailyCounts: {},   // {limitKey: count} reset zilnic
+  weeklyCounts: {},  // {limitKey: count} reset saptamanal
+};
+
+function save(){try{localStorage.setItem('eve_v6',JSON.stringify(state))}catch(e){}}
+function load(){
+  try{
+    const d=localStorage.getItem('eve_v6');
+    if(!d) return;
+    const s=JSON.parse(d);
+
+    // Reset LUNA — stelele raman, doar contoarele de cheltuieli se reseteaza
+    if(s.monthKey!==getMonthKey()){
+      const carried = s.stars; // stele ramase
+      if(carried>0) s.history=s.history||[];
+      s.history.push({
+        desc:`↩ Reportat din luna precedenta: ${carried} stele`,
+        pts:0,
+        time: new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short',year:'numeric'})
+      });
+      s.spentLv1=0; s.spentTotal=0;
+      s.earnedMonth=0; s.spentMonth=0;
+      s.monthKey=getMonthKey();
+    }
+
+    // Reset SAPTAMANA — doar contoare saptamanale + log
+    if(s.weekKey!==getWeekKey()){
+      const carried = s.stars;
+      if(carried>0){
+        s.history=s.history||[];
+        s.history.push({
+          desc:`↩ Reportat in saptamana noua: ${carried} stele`,
+          pts:0,
+          time: new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})
+        });
+      }
+      s.weekKey=getWeekKey();
+      s.weeklyCounts={};
+    }
+
+    // Reset ZI — bifele zilnice si contoare zilnice + log
+    if(s.todayKey!==getTodayKey()){
+      const carried = s.stars;
+      if(carried>0){
+        s.history=s.history||[];
+        s.history.push({
+          desc:`↩ Reportat in ziua noua: ${carried} stele`,
+          pts:0,
+          time: new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
+                new Date().toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})
+        });
+      }
+      s.done={}; s.bonus1Given=false; s.bonus2Given=false;
+      s.todayKey=getTodayKey();
+      s.dailyCounts={};
+    }
+
+    if(!s.dailyCounts) s.dailyCounts={};
+    if(!s.weeklyCounts) s.weeklyCounts={};
+    if(!s.weekKey) s.weekKey=getWeekKey();
+    if(s.history && s.history.length>200) s.history=s.history.slice(-200);
+    state=s;
+  }catch(e){}
+}
+
+function addHist(desc,pts){
+  const now=new Date();
+  const time=now.toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
+             now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  state.history.push({desc,pts,time});
+  if(state.history.length>120) state.history=state.history.slice(-120);
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+function renderTasks(){
+  [
+    {tasks:TASKS1, gridId:'tasksGrid1', barId:'bonusBar1', countId:'bonusCount1',
+     descId:'bonusDesc1', stripId:'bonusStrip1', badgeId:'bonusBadge1',
+     bonus:BONUS1, given:state.bonus1Given},
+    {tasks:TASKS2, gridId:'tasksGrid2', barId:'bonusBar2', countId:'bonusCount2',
+     descId:'bonusDesc2', stripId:'bonusStrip2', badgeId:'bonusBadge2',
+     bonus:BONUS2, given:state.bonus2Given},
+  ].forEach(g=>{
+    const doneN = g.tasks.filter(t=>state.done[t.id]).length;
+    document.getElementById(g.gridId).innerHTML = g.tasks.map(t=>{
+      const done=!!state.done[t.id];
+      return `<button class="task-row${done?' done':''}" onclick="toggleTask('${t.id}')">
+        <div class="task-dot">${done?'&#10003;':''}</div>
+        <span class="task-text">${t.name}</span>
+        <span class="task-pts">+${t.pts}&#11088;</span>
+      </button>`;
+    }).join('');
+    const pct=Math.round(doneN/g.tasks.length*100);
+    document.getElementById(g.barId).style.width=pct+'%';
+    document.getElementById(g.countId).textContent=`${doneN}/${g.tasks.length}`;
+    const strip=document.getElementById(g.stripId);
+    if(g.given){
+      strip.classList.add('earned');
+      document.getElementById(g.descId).textContent='Bonus obtinut azi! Bravo Eve!';
+    } else {
+      strip.classList.remove('earned');
+    }
+  });
+}
+
+function renderLevels(){
+  // Nivel 1: stele rascumparate cash (tip bani) -> max 1000 stele = 100 RON
+  const lv1Stars = state.spentLv1;
+  const lv1Ron = lv1Stars * STAR_VAL;
+  const lv1Pct = Math.min(100, Math.round(lv1Ron/100*100));
+  document.getElementById('lv1val').textContent = lv1Ron.toFixed(0)+' RON';
+  document.getElementById('lv1bar').style.width = lv1Pct+'%';
+
+  // Nivel 2: total recompense rascumparate -> max 1500 = 150 RON
+  const lv2Ron = state.spentTotal * STAR_VAL;
+  const lv2Pct = Math.min(100, Math.round(lv2Ron/150*100));
+  document.getElementById('lv2val').textContent = lv2Ron.toFixed(0)+' RON';
+  document.getElementById('lv2bar').style.width = lv2Pct+'%';
+
+  // Nivel 3: idem dar limita 220 RON
+  const lv3Ron = lv2Ron;
+  const lv3Pct = Math.min(100, Math.round(lv3Ron/220*100));
+  document.getElementById('lv3val').textContent = lv3Ron.toFixed(0)+' RON';
+  document.getElementById('lv3bar').style.width = lv3Pct+'%';
+
+  // Culori dinamice aproape de limita
+  const bar1=document.getElementById('lv1bar');
+  bar1.style.background=lv1Pct>=90?'#E24B4A':lv1Pct>=70?'#EF9F27':'#639922';
+  const bar2=document.getElementById('lv2bar');
+  bar2.style.background=lv2Pct>=90?'#E24B4A':lv2Pct>=70?'#EF9F27':'#EF9F27';
+  const bar3=document.getElementById('lv3bar');
+  bar3.style.background=lv3Pct>=90?'#E24B4A':lv3Pct>=70?'#7F77DD':'#534AB7';
+}
+
+function renderRewards(){
+  const cashLeft = MAX_LV1 - state.spentLv1;
+  const totalLeft = MAX_LV3 - state.spentTotal;
+  const warn=document.getElementById('limitWarn');
+  if(cashLeft<200 || totalLeft<300){
+    warn.className='limit-warn show';
+    warn.textContent=`Atentie: Cash ramas ${(cashLeft*STAR_VAL).toFixed(0)} RON din 100 | Total ramas ${(totalLeft*STAR_VAL).toFixed(0)} RON din 220`;
+  } else { warn.className='limit-warn'; }
+
+  document.getElementById('rewardsList').innerHTML=REWARDS.map(r=>{
+    const canAfford = state.stars>=r.pts;
+    const cashBlk = r.cashOnly && cashLeft<r.pts;
+    const totalBlk = totalLeft<r.pts;
+
+    // Limite zilnice
+    const dailyUsed = state.dailyCounts[r.limitKey]||0;
+    const dailyBlk = r.dailyLimit!==null && dailyUsed>=r.dailyLimit;
+
+    // Limite saptamanale
+    const weeklyUsed = state.weeklyCounts[r.limitKey]||0;
+    const weeklyBlk = r.weeklyLimit!==null && weeklyUsed>=r.weeklyLimit;
+
+    const blocked = cashBlk||totalBlk||dailyBlk||weeklyBlk;
+    const disabled = !canAfford||blocked;
+    let blkMsg='';
+    if(cashBlk) blkMsg='Limita cash lunara atinsa';
+    else if(totalBlk) blkMsg='Limita totala lunara atinsa';
+    else if(dailyBlk) blkMsg=`Limita zilnica atinsa (max ${r.dailyLimit}/zi)`;
+    else if(weeklyBlk) blkMsg=`Limita saptamanala atinsa (max ${r.weeklyLimit}/sapt)`;
+
+    // Label limita
+    let limitInfo='';
+    if(r.dailyLimit) limitInfo=`max ${r.dailyLimit}/zi`;
+    if(r.weeklyLimit) limitInfo=`max ${r.weeklyLimit}/sapt`;
+    const usedInfo = r.dailyLimit ? ` · folosit ${dailyUsed}/${r.dailyLimit} azi` :
+                     r.weeklyLimit ? ` · folosit ${weeklyUsed}/${r.weeklyLimit} sapt` : '';
+
+    return `<div class="reward-row">
+      <div class="reward-icon">${r.icon}</div>
+      <div class="reward-info">
+        <span class="reward-tag tag-${r.type}">${TAG_LABELS[r.type]}</span>
+        <div class="reward-name">${r.name}</div>
+        <div class="reward-cost">${r.pts} stele = ${(r.pts*STAR_VAL).toFixed(2)} RON${limitInfo?' · '+limitInfo:''}</div>
+        ${usedInfo?`<div style="font-size:10px;color:#aaa">${usedInfo}</div>`:''}
+        ${blkMsg?`<div class="reward-block-msg">&#128683; ${blkMsg}</div>`:''}
+      </div>
+      <button class="redeem-btn${blocked?' blk':''}" ${disabled?'disabled':''} onclick="redeem('${r.id}')">
+        ${blocked?'Blocat':'Rascumpar'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const h=document.getElementById('histList');
+  if(!state.history.length){
+    h.innerHTML='<div class="empty-state">Nicio activitate inca &#11088;</div>'; return;
+  }
+  h.innerHTML=[...state.history].reverse().slice(0,40).map(e=>{
+    const isCarry = e.desc && e.desc.startsWith('↩');
+    const cls=isCarry?'zero':e.pts>0?'plus':e.pts<0?'minus':'zero';
+    const pre=e.pts>0?'+':e.pts<0?'':'';
+    const rowStyle=isCarry?'background:#EEEDFE;border-radius:7px;padding:6px 8px;margin:3px 0':'';
+    const descStyle=isCarry?'color:#534AB7;font-weight:600':'';
+    const ptsDisplay=isCarry?'↩':'';
+    return `<div class="hist-row" style="${rowStyle}">
+      <div class="hist-left">
+        <span class="hist-desc" style="${descStyle}">${e.desc}</span>
+        <span class="hist-time">${e.time}</span>
+      </div>
+      <span class="hist-pts ${cls}">${isCarry?ptsDisplay:(pre+e.pts)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('statCastigat').textContent=state.earnedMonth;
+  document.getElementById('statCheltuit').textContent=state.spentMonth;
+  document.getElementById('statTotal').textContent=state.stars;
+}
+
+function updateUI(){
+  document.getElementById('totalStars').textContent=state.stars;
+  document.getElementById('moneyPill').textContent='= '+(state.stars*STAR_VAL).toFixed(2)+' RON';
+  renderTasks(); renderLevels(); renderRewards(); renderHistory();
+}
+
+function checkBonus1(){
+  const all=TASKS1.every(t=>state.done[t.id]);
+  if(all&&!state.bonus1Given){
+    state.bonus1Given=true;
+    state.stars+=BONUS1; state.earnedMonth+=BONUS1;
+    addHist('Bonus Rutina zilnica completa!',BONUS1);
+    return 1;
+  }
+  if(!all&&state.bonus1Given){
+    state.bonus1Given=false;
+    state.stars=Math.max(0,state.stars-BONUS1);
+    state.earnedMonth=Math.max(0,state.earnedMonth-BONUS1);
+    addHist('Bonus Rutina anulat',-BONUS1);
+  }
+  return 0;
+}
+
+function checkBonus2(){
+  const all=TASKS2.every(t=>state.done[t.id]);
+  if(all&&!state.bonus2Given){
+    state.bonus2Given=true;
+    state.stars+=BONUS2; state.earnedMonth+=BONUS2;
+    addHist('Bonus Comportament exemplar!',BONUS2);
+    return 1;
+  }
+  if(!all&&state.bonus2Given){
+    state.bonus2Given=false;
+    state.stars=Math.max(0,state.stars-BONUS2);
+    state.earnedMonth=Math.max(0,state.earnedMonth-BONUS2);
+    addHist('Bonus Comportament anulat',-BONUS2);
+  }
+  return 0;
+}
+
+function toggleTask(id){
+  const task=[...TASKS1,...TASKS2].find(t=>t.id===id);
+  if(!task) return;
+  if(state.done[id]){
+    state.done[id]=false;
+    state.stars=Math.max(0,state.stars-task.pts);
+    state.earnedMonth=Math.max(0,state.earnedMonth-task.pts);
+    addHist('Anulat: '+task.name,-task.pts);
+    checkBonus1(); checkBonus2();
+    showToast('-'+task.pts+' stele');
+  } else {
+    state.done[id]=true;
+    state.stars+=task.pts; state.earnedMonth+=task.pts;
+    addHist(task.name,task.pts);
+    const b1=checkBonus1(), b2=checkBonus2();
+    if(b1&&b2) showToast('+'+task.pts+' stele + AMBELE bonusuri! Uimitor!');
+    else if(b1) showToast('+'+task.pts+' stele + Bonus Rutina! Super!');
+    else if(b2) showToast('+'+task.pts+' stele + Bonus Comportament! Bravo!');
+    else showToast('+'+task.pts+' stele! Bravo Eve!');
+  }
+  save(); updateUI();
+}
+
+function redeem(id){
+  const r=REWARDS.find(x=>x.id===id);
+  if(!r) return;
+  if(state.stars<r.pts){showToast('Nu ai destule stele!');return;}
+  const cashLeft=MAX_LV1-state.spentLv1;
+  const totalLeft=MAX_LV3-state.spentTotal;
+  if(r.cashOnly&&cashLeft<r.pts){showToast('Limita cash lunara atinsa!');return;}
+  if(totalLeft<r.pts){showToast('Limita totala lunara atinsa!');return;}
+  // Verificare limite zilnice
+  if(r.dailyLimit!==null){
+    const used=state.dailyCounts[r.limitKey]||0;
+    if(used>=r.dailyLimit){showToast('Limita zilnica atinsa!');return;}
+    state.dailyCounts[r.limitKey]=(used+1);
+  }
+  // Verificare limite saptamanale
+  if(r.weeklyLimit!==null){
+    const used=state.weeklyCounts[r.limitKey]||0;
+    if(used>=r.weeklyLimit){showToast('Limita saptamanala atinsa!');return;}
+    state.weeklyCounts[r.limitKey]=(used+1);
+  }
+  state.stars-=r.pts;
+  state.spentMonth+=r.pts;
+  state.spentTotal+=r.pts;
+  if(r.cashOnly) state.spentLv1+=r.pts;
+  addHist('Rascumparat: '+r.name,-r.pts);
+  showToast('Felicitari! '+r.name+'!');
+  save(); updateUI();
+}
+
+function resetDay(){
+  if(!confirm('Incepi o zi noua? Bifele de azi se sterg, dar stelele raman!')) return;
+  const carried = state.stars;
+  state.done={}; state.bonus1Given=false; state.bonus2Given=false;
+  state.todayKey=getTodayKey();
+  state.dailyCounts={};
+  if(state.weekKey!==getWeekKey()){
+    state.weekKey=getWeekKey();
+    state.weeklyCounts={};
+  }
+  if(carried>0) addHist('↩ Reportat in ziua noua: '+carried+' stele', 0);
+  else addHist('Zi noua inceput', 0);
+  showToast('O zi noua! Succes, Eve! ('+carried+' stele reportate)');
+  save(); updateUI();
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['sarcini','recompense','istoric'][i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+load(); updateUI();
+</script>
+</body>
+</html>
