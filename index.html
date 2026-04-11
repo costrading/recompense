@@ -41,6 +41,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .task-pts{font-size:11px;font-weight:600;color:#aaa;flex-shrink:0}
 .task-row.done .task-pts{color:#3B6D11}
 
+.penalty-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #ebe9e0;border-radius:10px;padding:9px 11px;width:100%;text-align:left;transition:all .15s}
+.penalty-row:hover{border-color:#E24B4A;background:#FFF0EF}
+.penalty-row.active{background:#FBEAF0;border-color:#EBA8C0}
+.penalty-dot{width:18px;height:18px;border-radius:50%;border:1.5px solid #d0cec8;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.penalty-row.active .penalty-dot{background:#993C1D;border-color:#993C1D;color:#fff}
+.penalty-text{flex:1;font-size:12px;font-weight:500;color:#1a1a1a;line-height:1.3}
+.penalty-row.active .penalty-text{color:#72243E}
+.penalty-pts{font-size:11px;font-weight:600;color:#aaa;flex-shrink:0}
+.penalty-row.active .penalty-pts{color:#993C1D}
+.penalty-undo-btn{background:#FBEAF0;border:1px solid #EBA8C0;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;color:#72243E;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.penalty-undo-btn:hover{background:#EBA8C0}
+.group-label-penalty{color:#993C1D}
+
 .bonus-strip{border-radius:10px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:10px}
 .bonus-strip.b1{background:#EAF3DE}
 .bonus-strip.b2{background:#EEEDFE}
@@ -119,6 +132,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-reset-day:hover{background:#FAC775}
 .btn-reset-all{background:#FBEAF0;color:#72243E;border-color:#EBA8C0}
 .btn-reset-all:hover{background:#EBA8C0}
+.btn-undo-penalty{background:#FBEAF0;color:#72243E;border-color:#EBA8C0}
+.btn-undo-penalty:hover{background:#EBA8C0}
 .reset-open-btn{width:100%;margin-top:6px;background:#fff;border:1px solid #ebe9e0;border-radius:9px;padding:9px;font-size:12px;cursor:pointer;color:#c0392b;font-weight:500;transition:all .15s}
 .reset-open-btn:hover{background:#FBEAF0;border-color:#EBA8C0}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:#2C2C2A;color:#F1EFE8;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
@@ -199,6 +214,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="bonus-badge" id="bonusBadge2">+12 &#11088;</div>
     </div>
 
+    <div class="group-label group-label-penalty" style="margin-top:14px">
+      <span>&#9679;</span> Comportament gresit
+    </div>
+    <div style="font-size:11px;color:#c0392b;margin:-2px 0 6px;padding:0 2px">Apasa pentru a aplica o penalizare. Anulare doar cu parola.</div>
+    <div class="tasks-list" id="penaltiesGrid"></div>
+
     <button class="day-btn" onclick="resetDay()">&#8635; Incepe o zi noua</button>
     <button class="reset-open-btn" onclick="openResetModal()">&#9888;&#65039; Resetare date</button>
   </div>
@@ -214,6 +235,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="btn-cancel" onclick="closeResetModal()">Anuleaza</button>
         <button class="btn-reset-day" onclick="tryReset('day')">&#8635; Zi noua</button>
         <button class="btn-reset-all" onclick="tryReset('all')">&#128465; Tot</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ANULARE PENALIZARE -->
+  <div class="modal-overlay" id="penaltyModal" style="display:none" onclick="if(event.target===this)closePenaltyModal()">
+    <div class="modal">
+      <h3>&#8635; Anulare penalizare</h3>
+      <p id="penaltyModalDesc">Introdu parola pentru a anula aceasta penalizare.</p>
+      <input type="password" id="penaltyPwd" placeholder="Parola..." oninput="document.getElementById('penaltyPwdErr').classList.remove('show');this.classList.remove('err')" onkeydown="if(event.key==='Enter')tryUndoPenalty()"/>
+      <div class="modal-err" id="penaltyPwdErr">Parola incorecta. Incearca din nou.</div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closePenaltyModal()">Anuleaza</button>
+        <button class="btn-undo-penalty" onclick="tryUndoPenalty()">&#8635; Anuleaza penalizarea</button>
       </div>
     </div>
   </div>
@@ -325,6 +360,14 @@ const REWARDS = [
 ];
 const TAG_LABELS = {timp:'Timp extra', bani:'Bani', special:'Iesire / Surpriza'};
 
+const PENALTIES = [
+  {id:'no_mancat',   icon:'🍽️',  name:'Nu a vrut sa manance deloc',         pts:4},
+  {id:'plans',       icon:'😭',  name:'A plans si nu a ascultat',            pts:4},
+  {id:'culcare_taz', icon:'🌙',  name:'A adormit tarziu',                    pts:3},
+  {id:'scandal_cul', icon:'😤',  name:'A facut scandal la culcare',          pts:3},
+  {id:'jucarii_nea', icon:'🧸',  name:'Nu a strans jucariile dupa avertisment', pts:2},
+];
+
 function getMonthKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}`}
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
 function getWeekKey(){const d=new Date();const jan=new Date(d.getFullYear(),0,1);const w=Math.ceil(((d-jan)/86400000+jan.getDay()+1)/7);return `${d.getFullYear()}-W${w}`}
@@ -335,11 +378,12 @@ let state = {
   history: [],
   spentLv1: 0,
   spentTotal: 0,
-  spentToday: 0,   // stele cheltuite azi (pentru protectia debifarii)
+  spentToday: 0,
   earnedMonth: 0,
   spentMonth: 0,
   bonus1Given: false,
   bonus2Given: false,
+  penaltiesApplied: [],  // [{id, pts, time}] — penalizari aplicate azi
   monthKey: getMonthKey(),
   todayKey: getTodayKey(),
   weekKey: getWeekKey(),
@@ -399,12 +443,14 @@ function load(){
       s.todayKey=getTodayKey();
       s.dailyCounts={};
       s.spentToday=0;
+      s.penaltiesApplied=[];
     }
 
     if(!s.dailyCounts) s.dailyCounts={};
     if(!s.weeklyCounts) s.weeklyCounts={};
     if(!s.weekKey) s.weekKey=getWeekKey();
     if(!s.spentToday) s.spentToday=0;
+    if(!s.penaltiesApplied) s.penaltiesApplied=[];
     if(s.history && s.history.length>200) s.history=s.history.slice(-200);
     state=s;
   }catch(e){}
@@ -566,7 +612,7 @@ function renderHistory(){
 function updateUI(){
   document.getElementById('totalStars').textContent=state.stars;
   document.getElementById('moneyPill').textContent='= '+(state.stars*STAR_VAL).toFixed(2)+' RON';
-  renderTasks(); renderLevels(); renderRewards(); renderHistory();
+  renderTasks(); renderLevels(); renderRewards(); renderHistory(); renderPenalties();
 }
 
 function checkBonus1(){
@@ -675,6 +721,7 @@ function resetDay(){
   state.todayKey=getTodayKey();
   state.dailyCounts={};
   state.spentToday=0;
+  state.penaltiesApplied=[];
   if(state.weekKey!==getWeekKey()){
     state.weekKey=getWeekKey();
     state.weeklyCounts={};
@@ -728,6 +775,81 @@ function tryReset(type){
     setTimeout(()=>location.reload(), 1200);
     return;
   }
+  save(); updateUI();
+}
+
+function renderPenalties(){
+  const grid = document.getElementById('penaltiesGrid');
+  if(!grid) return;
+  grid.innerHTML = PENALTIES.map(p => {
+    // Numara de cate ori s-a aplicat azi
+    const timesApplied = state.penaltiesApplied.filter(x=>x.id===p.id).length;
+    const isActive = timesApplied > 0;
+    const countLabel = timesApplied > 1 ? ` (x${timesApplied})` : '';
+    return `<div class="penalty-row${isActive?' active':''}" onclick="applyPenalty('${p.id}')">
+      <div class="penalty-dot">${isActive?'✗':''}</div>
+      <span class="penalty-text">${p.icon} ${p.name}${countLabel}</span>
+      <span class="penalty-pts">-${p.pts}⭐</span>
+      ${isActive?`<button class="penalty-undo-btn" onclick="event.stopPropagation();openPenaltyUndoModal('${p.id}')">Anuleaza</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function applyPenalty(id){
+  const p = PENALTIES.find(x=>x.id===id);
+  if(!p) return;
+  const now = new Date();
+  const time = now.toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
+               now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  state.penaltiesApplied.push({id, pts:p.pts, time});
+  state.stars = Math.max(0, state.stars - p.pts);
+  state.earnedMonth = Math.max(0, state.earnedMonth - p.pts);
+  addHist('⚠️ Penalizare: '+p.name, -p.pts);
+  showToast('⚠️ -'+p.pts+' stele — '+p.name);
+  save(); updateUI();
+}
+
+let pendingUndoPenaltyId = null;
+
+function openPenaltyUndoModal(id){
+  const p = PENALTIES.find(x=>x.id===id);
+  if(!p) return;
+  pendingUndoPenaltyId = id;
+  document.getElementById('penaltyPwd').value='';
+  document.getElementById('penaltyPwdErr').classList.remove('show');
+  document.getElementById('penaltyPwd').classList.remove('err');
+  document.getElementById('penaltyModalDesc').textContent =
+    `Introdu parola pentru a anula penalizarea: "${p.name}" (-${p.pts} stele).`;
+  document.getElementById('penaltyModal').style.display='flex';
+  setTimeout(()=>document.getElementById('penaltyPwd').focus(),100);
+}
+
+function closePenaltyModal(){
+  document.getElementById('penaltyModal').style.display='none';
+  pendingUndoPenaltyId=null;
+}
+
+function tryUndoPenalty(){
+  const pwd = document.getElementById('penaltyPwd').value;
+  if(pwd!==RESET_PASSWORD){
+    document.getElementById('penaltyPwdErr').classList.add('show');
+    document.getElementById('penaltyPwd').classList.add('err');
+    document.getElementById('penaltyPwd').focus();
+    return;
+  }
+  const id = pendingUndoPenaltyId;
+  const p = PENALTIES.find(x=>x.id===id);
+  if(!p){closePenaltyModal();return;}
+  // Sterge ultima aparitie a acestei penalizari
+  const idx = [...state.penaltiesApplied].map(x=>x.id).lastIndexOf(id);
+  if(idx!==-1){
+    state.penaltiesApplied.splice(idx,1);
+    state.stars += p.pts;
+    state.earnedMonth += p.pts;
+    addHist('↩ Penalizare anulata: '+p.name, p.pts);
+    showToast('↩ Penalizare anulata — +'+p.pts+' stele recuperate');
+  }
+  closePenaltyModal();
   save(); updateUI();
 }
 
