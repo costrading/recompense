@@ -102,6 +102,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .limit-warn{background:#FAEEDA;border:1px solid #FAC775;border-radius:9px;padding:7px 11px;font-size:11px;color:#633806;margin-bottom:8px;display:none}
 .limit-warn.show{display:block}
 
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:16px;padding:22px 20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:4px;color:#1a1a1a}
+.modal p{font-size:12px;color:#888;margin-bottom:14px;line-height:1.5}
+.modal input{width:100%;border:1.5px solid #ebe9e0;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:10px;outline:none;transition:border .15s}
+.modal input:focus{border-color:#AFA9EC}
+.modal input.err{border-color:#E24B4A}
+.modal-err{font-size:11px;color:#E24B4A;margin:-6px 0 8px;display:none}
+.modal-err.show{display:block}
+.modal-btns{display:flex;gap:8px}
+.modal-btns button{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.btn-cancel{background:#f5f4f0;color:#888;border-color:#ebe9e0}
+.btn-cancel:hover{background:#ebe9e0}
+.btn-reset-day{background:#FEF3E2;color:#854F0B;border-color:#FAC775}
+.btn-reset-day:hover{background:#FAC775}
+.btn-reset-all{background:#FBEAF0;color:#72243E;border-color:#EBA8C0}
+.btn-reset-all:hover{background:#EBA8C0}
+.reset-open-btn{width:100%;margin-top:6px;background:#fff;border:1px solid #ebe9e0;border-radius:9px;padding:9px;font-size:12px;cursor:pointer;color:#c0392b;font-weight:500;transition:all .15s}
+.reset-open-btn:hover{background:#FBEAF0;border-color:#EBA8C0}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:#2C2C2A;color:#F1EFE8;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -181,6 +200,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
 
     <button class="day-btn" onclick="resetDay()">&#8635; Incepe o zi noua</button>
+    <button class="reset-open-btn" onclick="openResetModal()">&#9888;&#65039; Resetare date</button>
+  </div>
+
+  <!-- MODAL RESET -->
+  <div class="modal-overlay" id="resetModal" style="display:none" onclick="if(event.target===this)closeResetModal()">
+    <div class="modal">
+      <h3>&#9888;&#65039; Resetare date</h3>
+      <p>Introdu parola pentru a continua. Alege tipul de resetare:</p>
+      <input type="password" id="resetPwd" placeholder="Parola..." oninput="document.getElementById('resetPwdErr').classList.remove('show');this.classList.remove('err')" onkeydown="if(event.key==='Enter')tryReset(pendingResetType)"/>
+      <div class="modal-err" id="resetPwdErr">Parola incorecta. Incearca din nou.</div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeResetModal()">Anuleaza</button>
+        <button class="btn-reset-day" onclick="tryReset('day')">&#8635; Zi noua</button>
+        <button class="btn-reset-all" onclick="tryReset('all')">&#128465; Tot</button>
+      </div>
+    </div>
   </div>
 
   <!-- TAB RECOMPENSE -->
@@ -300,6 +335,7 @@ let state = {
   history: [],
   spentLv1: 0,
   spentTotal: 0,
+  spentToday: 0,   // stele cheltuite azi (pentru protectia debifarii)
   earnedMonth: 0,
   spentMonth: 0,
   bonus1Given: false,
@@ -307,8 +343,8 @@ let state = {
   monthKey: getMonthKey(),
   todayKey: getTodayKey(),
   weekKey: getWeekKey(),
-  dailyCounts: {},   // {limitKey: count} reset zilnic
-  weeklyCounts: {},  // {limitKey: count} reset saptamanal
+  dailyCounts: {},
+  weeklyCounts: {},
 };
 
 function save(){try{localStorage.setItem('eve_v6',JSON.stringify(state))}catch(e){}}
@@ -362,11 +398,13 @@ function load(){
       s.done={}; s.bonus1Given=false; s.bonus2Given=false;
       s.todayKey=getTodayKey();
       s.dailyCounts={};
+      s.spentToday=0;
     }
 
     if(!s.dailyCounts) s.dailyCounts={};
     if(!s.weeklyCounts) s.weeklyCounts={};
     if(!s.weekKey) s.weekKey=getWeekKey();
+    if(!s.spentToday) s.spentToday=0;
     if(s.history && s.history.length>200) s.history=s.history.slice(-200);
     state=s;
   }catch(e){}
@@ -569,6 +607,18 @@ function toggleTask(id){
   const task=[...TASKS1,...TASKS2].find(t=>t.id===id);
   if(!task) return;
   if(state.done[id]){
+    // Calculeaza stele castigate azi
+    const earnedToday = [...TASKS1,...TASKS2]
+      .filter(t=>state.done[t.id])
+      .reduce((s,t)=>s+t.pts, 0)
+      + (state.bonus1Given?BONUS1:0)
+      + (state.bonus2Given?BONUS2:0);
+    // Daca debifand aceasta sarcina, stelele castigate azi ar fi < stele cheltuite azi, blocheaza
+    const afterUncheck = earnedToday - task.pts;
+    if(state.spentToday > 0 && afterUncheck < state.spentToday){
+      showToast('⛔ Nu poti debifa — ai deja recompense luate azi!');
+      return;
+    }
     state.done[id]=false;
     state.stars=Math.max(0,state.stars-task.pts);
     state.earnedMonth=Math.max(0,state.earnedMonth-task.pts);
@@ -611,6 +661,7 @@ function redeem(id){
   state.stars-=r.pts;
   state.spentMonth+=r.pts;
   state.spentTotal+=r.pts;
+  state.spentToday+=r.pts;
   if(r.cashOnly) state.spentLv1+=r.pts;
   addHist('Rascumparat: '+r.name,-r.pts);
   showToast('Felicitari! '+r.name+'!');
@@ -623,6 +674,7 @@ function resetDay(){
   state.done={}; state.bonus1Given=false; state.bonus2Given=false;
   state.todayKey=getTodayKey();
   state.dailyCounts={};
+  state.spentToday=0;
   if(state.weekKey!==getWeekKey()){
     state.weekKey=getWeekKey();
     state.weeklyCounts={};
@@ -630,6 +682,52 @@ function resetDay(){
   if(carried>0) addHist('↩ Reportat in ziua noua: '+carried+' stele', 0);
   else addHist('Zi noua inceput', 0);
   showToast('O zi noua! Succes, Eve! ('+carried+' stele reportate)');
+  save(); updateUI();
+}
+
+const RESET_PASSWORD = 'reseteaza';
+let pendingResetType = null;
+
+function openResetModal(){
+  document.getElementById('resetPwd').value='';
+  document.getElementById('resetPwdErr').classList.remove('show');
+  document.getElementById('resetPwd').classList.remove('err');
+  document.getElementById('resetModal').style.display='flex';
+  setTimeout(()=>document.getElementById('resetPwd').focus(),100);
+}
+
+function closeResetModal(){
+  document.getElementById('resetModal').style.display='none';
+}
+
+function tryReset(type){
+  pendingResetType=type;
+  const pwd=document.getElementById('resetPwd').value;
+  if(pwd!==RESET_PASSWORD){
+    document.getElementById('resetPwdErr').classList.add('show');
+    document.getElementById('resetPwd').classList.add('err');
+    document.getElementById('resetPwd').focus();
+    return;
+  }
+  closeResetModal();
+  if(type==='day'){
+    // Resetare zi: stele raman, bifele si contoarele zilnice se sterg
+    const carried=state.stars;
+    state.done={}; state.bonus1Given=false; state.bonus2Given=false;
+    state.todayKey=getTodayKey();
+    state.dailyCounts={};
+    state.spentToday=0;
+    if(state.weekKey!==getWeekKey()){state.weekKey=getWeekKey();state.weeklyCounts={};}
+    if(carried>0) addHist('↩ Reset zi — reportat: '+carried+' stele',0);
+    else addHist('Reset zi efectuat',0);
+    showToast('Zi resetata! Stele pastrate: '+carried);
+  } else {
+    // Resetare totala: sterge tot din localStorage
+    try{localStorage.removeItem('eve_v6');}catch(e){}
+    showToast('Toate datele au fost sterse. Repornire...');
+    setTimeout(()=>location.reload(), 1200);
+    return;
+  }
   save(); updateUI();
 }
 
