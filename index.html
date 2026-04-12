@@ -53,6 +53,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .penalty-undo-btn{background:#FBEAF0;border:1px solid #EBA8C0;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;color:#72243E;white-space:nowrap;flex-shrink:0;transition:all .15s}
 .penalty-undo-btn:hover{background:#EBA8C0}
 .group-label-penalty{color:#993C1D}
+.extra-pts-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #ebe9e0;border-radius:10px;padding:8px 10px;margin-bottom:5px}
+.extra-pts-text{flex:1;font-size:12px;font-weight:500;color:#1a1a1a}
+.extra-pts-badge{font-size:11px;font-weight:700;color:#3B6D11;flex-shrink:0}
+.extra-pts-del{background:none;border:none;cursor:pointer;font-size:15px;color:#ccc;flex-shrink:0;padding:0 2px;transition:color .15s}
+.extra-pts-del:hover{color:#E24B4A}
+.extra-add-row{display:flex;gap:7px;margin-top:4px}
+.extra-add-input{flex:1;border:1.5px solid #ebe9e0;border-radius:8px;padding:8px 10px;font-size:12px;outline:none;transition:border .15s;background:#fff}
+.extra-add-input:focus{border-color:#97C459}
+.extra-add-btn{background:#EAF3DE;border:1px solid #97C459;border-radius:8px;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer;color:#27500A;white-space:nowrap;transition:all .15s}
+.extra-add-btn:hover{background:#97C459;color:#fff}
+.export-section{margin:10px 0 4px}
+.export-title{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#888;margin-bottom:8px}
+.export-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+.export-btn{background:#fff;border:1px solid #ebe9e0;border-radius:9px;padding:9px 4px;font-size:11px;font-weight:600;cursor:pointer;color:#534AB7;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.export-btn:hover{background:#EEEDFE;border-color:#AFA9EC}
+.export-btn span{font-size:17px}
+
+.btn-yesterday{width:100%;margin-top:6px;background:#fff;border:1px solid #ebe9e0;border-radius:9px;padding:9px;font-size:12px;cursor:pointer;color:#534AB7;font-weight:500;transition:all .15s}
+.btn-yesterday:hover{background:#EEEDFE;border-color:#AFA9EC}
+.yesterday-task-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #ebe9e0;border-radius:10px;padding:9px 11px;cursor:pointer;transition:all .15s;width:100%;text-align:left;margin-bottom:5px}
+.yesterday-task-row:hover{border-color:#AFA9EC;background:#EEEDFE}
+.yesterday-task-row.done{background:#EAF3DE;border-color:#97C459;cursor:default}
+.yesterday-task-row.done .task-dot{background:#3B6D11;border-color:#3B6D11;color:#fff}
+.yesterday-task-row.done .task-text{color:#27500A}
+.yesterday-task-row.done .task-pts{color:#3B6D11}
+.modal-scroll{max-height:55vh;overflow-y:auto;margin:8px -4px 10px;padding:0 4px}
+.yesterday-bonus-strip{border-radius:10px;padding:8px 12px;margin:8px 0 4px;display:flex;align-items:center;gap:10px}
+.yesterday-bonus-strip.b1{background:#EAF3DE}
+.yesterday-bonus-strip.b2{background:#EEEDFE}
+.yesterday-bonus-strip.earned1{border:1.5px solid #97C459}
+.yesterday-bonus-strip.earned2{border:1.5px solid #AFA9EC}
 
 .bonus-strip{border-radius:10px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:10px}
 .bonus-strip.b1{background:#EAF3DE}
@@ -191,7 +222,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="bonus-name">&#127942; Bonus Rutina</div>
         <div class="bonus-prog">
           <div class="bonus-bar-wrap"><div class="bonus-bar" id="bonusBar1" style="width:0%"></div></div>
-          <div class="bonus-count" id="bonusCount1">0/6</div>
+          <div class="bonus-count" id="bonusCount1">0/7</div>
         </div>
         <div class="bonus-desc" id="bonusDesc1">Completeaza toate pentru +9 stele/zi (spre 150 RON/luna)</div>
       </div>
@@ -214,6 +245,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="bonus-badge" id="bonusBadge2">+12 &#11088;</div>
     </div>
 
+    <div class="group-label" style="color:#E67E22;margin-top:14px">
+      <span>&#9679;</span> Alte puncte <span style="font-size:10px;font-weight:400;color:#aaa;text-transform:none;letter-spacing:0">(nu intra in bonus)</span>
+    </div>
+    <div id="extraPtsList"></div>
+    <div class="extra-add-row">
+      <input class="extra-add-input" id="extraPtsInput" type="text" placeholder="Ex: Am ajutat la gatit..." maxlength="60"
+        onkeydown="if(event.key==='Enter')addExtraPoint()"/>
+      <button class="extra-add-btn" onclick="addExtraPoint()">+ 3 ⭐</button>
+    </div>
+
     <div class="group-label group-label-penalty" style="margin-top:14px">
       <span>&#9679;</span> Comportament gresit
     </div>
@@ -221,7 +262,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="tasks-list" id="penaltiesGrid"></div>
 
     <button class="day-btn" onclick="resetDay()">&#8635; Incepe o zi noua</button>
+    <button class="btn-yesterday" onclick="openYesterdayModal()">&#8592; Adauga puncte pentru ieri</button>
     <button class="reset-open-btn" onclick="openResetModal()">&#9888;&#65039; Resetare date</button>
+  </div>
+
+  <!-- MODAL ZI ANTERIOARA -->
+  <div class="modal-overlay" id="yesterdayModal" style="display:none" onclick="if(event.target===this)closeYesterdayModal()">
+    <div class="modal" style="max-width:380px">
+      <h3>&#8592; Puncte pentru ieri</h3>
+      <p id="yesterdayModalDesc" style="margin-bottom:10px">Introdu parola pentru a accesa sarcinile de ieri.</p>
+      <div id="yesterdayPwdSection">
+        <input type="password" id="yesterdayPwd" placeholder="Parola..." style="width:100%;border:1.5px solid #ebe9e0;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:6px;outline:none;transition:border .15s" oninput="this.classList.remove('err');document.getElementById('yesterdayPwdErr').classList.remove('show')" onkeydown="if(event.key==='Enter')unlockYesterday()"/>
+        <div class="modal-err" id="yesterdayPwdErr">Parola incorecta.</div>
+        <div class="modal-btns">
+          <button class="btn-cancel" onclick="closeYesterdayModal()">Anuleaza</button>
+          <button class="btn-reset-day" onclick="unlockYesterday()">&#8594; Continua</button>
+        </div>
+      </div>
+      <div id="yesterdayTaskSection" style="display:none">
+        <div class="modal-scroll" id="yesterdayTasksInner"></div>
+        <div class="modal-btns">
+          <button class="btn-cancel" onclick="closeYesterdayModal()">Inchide</button>
+          <button class="btn-reset-day" onclick="saveYesterdayAndClose()">&#10003; Salveaza &amp; Inchide</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL RESET -->
@@ -281,6 +346,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:.05em;text-transform:uppercase;margin:4px 0 8px">Activitate recenta</div>
     <div class="hist-list" id="histList"></div>
+
+    <div class="export-section" style="margin-top:16px">
+      <div class="export-title">&#128196; Export rapoarte</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:8px">Descarca datele ca Excel sau PDF</div>
+      <div class="export-grid">
+        <button class="export-btn" onclick="exportXLS('zi')"><span>📊</span>XLS Zi</button>
+        <button class="export-btn" onclick="exportXLS('luna')"><span>📊</span>XLS Luna</button>
+        <button class="export-btn" onclick="exportXLS('an')"><span>📊</span>XLS An</button>
+        <button class="export-btn" onclick="exportPDF('zi')"><span>📄</span>PDF Zi</button>
+        <button class="export-btn" onclick="exportPDF('luna')"><span>📄</span>PDF Luna</button>
+        <button class="export-btn" onclick="exportPDF('an')"><span>📄</span>PDF An</button>
+      </div>
+    </div>
+
+    <div class="export-section" style="margin-top:12px">
+      <div class="export-title">&#128190; Backup &amp; Restaurare date</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:8px">Salveaza toate datele Eve sau restaureaza dintr-un backup anterior</div>
+      <div style="display:flex;gap:8px">
+        <button class="export-btn" style="flex:1;flex-direction:row;gap:6px;justify-content:center;padding:10px 8px" onclick="exportBackup()">
+          <span>💾</span><span style="font-size:12px">Salveaza backup</span>
+        </button>
+        <button class="export-btn" style="flex:1;flex-direction:row;gap:6px;justify-content:center;padding:10px 8px;color:#993C1D" onclick="document.getElementById('importFileInput').click()">
+          <span>📂</span><span style="font-size:12px">Importa backup</span>
+        </button>
+      </div>
+      <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importBackup(this)"/>
+      <div id="backupStatus" style="font-size:11px;margin-top:7px;min-height:16px;text-align:center"></div>
+    </div>
   </div>
 
 </div>
@@ -319,12 +412,13 @@ const MAX_LV3 = 2200;
 // =============================================
 
 const TASKS1 = [
-  {id:'mancat',     name:'Am mancat tot din farfurie',      pts:4},
-  {id:'jucarii',    name:'Mi-am strans jucariile',          pts:4},
-  {id:'imbracat',   name:'M-am imbracat singura',           pts:3},
-  {id:'dinti_dim',  name:'Mi-am spalat dintii dimineata',   pts:3},
-  {id:'dinti_sea',  name:'Mi-am spalat dintii seara',       pts:3},
-  {id:'dormit_ora', name:'Am dormit la ora mea',            pts:3},
+  {id:'mancat',     name:'Am mancat tot din farfurie',           pts:4},
+  {id:'jucarii',    name:'Mi-am strans jucariile',               pts:4},
+  {id:'imbracat',   name:'M-am imbracat singura',                pts:3},
+  {id:'dinti_dim',  name:'Mi-am spalat dintii dimineata',        pts:3},
+  {id:'dinti_sea',  name:'Mi-am spalat dintii seara',            pts:3},
+  {id:'dormit_sea', name:'Am adormit seara la ora stabilita',    pts:3},
+  {id:'dormit_pra', name:'Am adormit la pranz la ora stabilita', pts:3},
 ];
 const BONUS1 = 9;
 
@@ -361,16 +455,20 @@ const REWARDS = [
 const TAG_LABELS = {timp:'Timp extra', bani:'Bani', special:'Iesire / Surpriza'};
 
 const PENALTIES = [
-  {id:'no_mancat',   icon:'🍽️',  name:'Nu a vrut sa manance deloc',         pts:4},
-  {id:'plans',       icon:'😭',  name:'A plans si nu a ascultat',            pts:4},
-  {id:'culcare_taz', icon:'🌙',  name:'A adormit tarziu',                    pts:3},
-  {id:'scandal_cul', icon:'😤',  name:'A facut scandal la culcare',          pts:3},
-  {id:'jucarii_nea', icon:'🧸',  name:'Nu a strans jucariile dupa avertisment', pts:2},
+  {id:'no_mancat',   icon:'🍽️',  name:'Nu a vrut sa manance deloc',              pts:4},
+  {id:'no_gust',     icon:'🤢',  name:'Nu vrea sa guste o mancare noua',         pts:3},
+  {id:'scarba',      icon:'😖',  name:'Isi face scarba cand mananca',            pts:3},
+  {id:'plans',       icon:'😭',  name:'A plans si nu a ascultat',                pts:4},
+  {id:'culcare_taz', icon:'🌙',  name:'A adormit tarziu',                        pts:3},
+  {id:'scandal_cul', icon:'😤',  name:'A facut scandal la culcare',              pts:3},
+  {id:'jucarii_nea', icon:'🧸',  name:'Nu a strans jucariile dupa avertisment',  pts:2},
 ];
 
 function getMonthKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}`}
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
 function getWeekKey(){const d=new Date();const jan=new Date(d.getFullYear(),0,1);const w=Math.ceil(((d-jan)/86400000+jan.getDay()+1)/7);return `${d.getFullYear()}-W${w}`}
+function getYesterdayKey(){const d=new Date(Date.now()-86400000);return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
+function formatYesterdayDate(){const d=new Date(Date.now()-86400000);return d.toLocaleDateString('ro-RO',{weekday:'long',day:'numeric',month:'long'})}
 
 let state = {
   stars: 0,
@@ -384,6 +482,9 @@ let state = {
   bonus1Given: false,
   bonus2Given: false,
   penaltiesApplied: [],  // [{id, pts, time}] — penalizari aplicate azi
+  extraPoints: [],       // [{text, pts, time, date}] — activitati libere cu puncte
+  yesterdayDone: {},     // {taskId: true} — sarcini bifate retroactiv pentru ziua anterioara
+  yesterdayKey: '',      // ce zi a fost "ieri" cand s-a folosit panoul
   monthKey: getMonthKey(),
   todayKey: getTodayKey(),
   weekKey: getWeekKey(),
@@ -451,6 +552,9 @@ function load(){
     if(!s.weekKey) s.weekKey=getWeekKey();
     if(!s.spentToday) s.spentToday=0;
     if(!s.penaltiesApplied) s.penaltiesApplied=[];
+    if(!s.extraPoints) s.extraPoints=[];
+    if(!s.yesterdayDone) s.yesterdayDone={};
+    if(!s.yesterdayKey) s.yesterdayKey='';
     if(s.history && s.history.length>200) s.history=s.history.slice(-200);
     state=s;
   }catch(e){}
@@ -612,7 +716,7 @@ function renderHistory(){
 function updateUI(){
   document.getElementById('totalStars').textContent=state.stars;
   document.getElementById('moneyPill').textContent='= '+(state.stars*STAR_VAL).toFixed(2)+' RON';
-  renderTasks(); renderLevels(); renderRewards(); renderHistory(); renderPenalties();
+  renderTasks(); renderLevels(); renderRewards(); renderHistory(); renderPenalties(); renderExtraPoints();
 }
 
 function checkBonus1(){
@@ -722,6 +826,7 @@ function resetDay(){
   state.dailyCounts={};
   state.spentToday=0;
   state.penaltiesApplied=[];
+  if(!state.extraPoints) state.extraPoints=[];
   if(state.weekKey!==getWeekKey()){
     state.weekKey=getWeekKey();
     state.weeklyCounts={};
@@ -764,6 +869,8 @@ function tryReset(type){
     state.todayKey=getTodayKey();
     state.dailyCounts={};
     state.spentToday=0;
+    state.penaltiesApplied=[];
+    if(!state.extraPoints) state.extraPoints=[];
     if(state.weekKey!==getWeekKey()){state.weekKey=getWeekKey();state.weeklyCounts={};}
     if(carried>0) addHist('↩ Reset zi — reportat: '+carried+' stele',0);
     else addHist('Reset zi efectuat',0);
@@ -850,6 +957,395 @@ function tryUndoPenalty(){
     showToast('↩ Penalizare anulata — +'+p.pts+' stele recuperate');
   }
   closePenaltyModal();
+  save(); updateUI();
+}
+
+// ── ALTE PUNCTE ────────────────────────────────────────────
+const EXTRA_PTS = 3;
+
+function renderExtraPoints(){
+  const list = document.getElementById('extraPtsList');
+  if(!list) return;
+  if(!state.extraPoints || state.extraPoints.length===0){
+    list.innerHTML='<div style="font-size:11px;color:#bbb;padding:4px 2px 6px">Nicio activitate extra inca.</div>';
+    return;
+  }
+  list.innerHTML = state.extraPoints.map((e,i)=>`
+    <div class="extra-pts-row">
+      <span class="extra-pts-text">⭐ ${e.text}</span>
+      <span class="extra-pts-badge">+${e.pts}⭐</span>
+      <button class="extra-pts-del" onclick="removeExtraPoint(${i})" title="Sterge">×</button>
+    </div>`).join('');
+}
+
+function addExtraPoint(){
+  const input = document.getElementById('extraPtsInput');
+  const text = (input.value||'').trim();
+  if(!text){input.focus();return;}
+  const now = new Date();
+  const time = now.toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
+               now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  const entry = {text, pts:EXTRA_PTS, time, date:getTodayKey()};
+  if(!state.extraPoints) state.extraPoints=[];
+  state.extraPoints.push(entry);
+  state.stars += EXTRA_PTS;
+  state.earnedMonth += EXTRA_PTS;
+  addHist('⭐ Extra: '+text, EXTRA_PTS);
+  showToast('+'+EXTRA_PTS+' stele — '+text);
+  input.value='';
+  save(); updateUI();
+}
+
+function removeExtraPoint(idx){
+  if(!state.extraPoints || idx<0 || idx>=state.extraPoints.length) return;
+  const e = state.extraPoints[idx];
+  state.extraPoints.splice(idx,1);
+  state.stars = Math.max(0, state.stars - e.pts);
+  state.earnedMonth = Math.max(0, state.earnedMonth - e.pts);
+  addHist('↩ Extra anulat: '+e.text, -e.pts);
+  showToast('Activitate extra stearsa (-'+e.pts+' stele)');
+  save(); updateUI();
+}
+
+// ── EXPORT ─────────────────────────────────────────────────
+function getFilteredHistory(period){
+  const now = new Date();
+  return state.history.filter(e=>{
+    if(!e.time) return false;
+    // Parse Romanian date from e.time (e.g. "12 apr., 14:30" or "12 apr. 2025")
+    const raw = e.time;
+    // Try to match a date from the time string
+    const months = {ian:0,feb:1,mar:2,apr:3,mai:4,iun:5,iul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    const m = raw.match(/(\d+)\s+([a-z]+)/i);
+    if(!m) return period==='zi'; // fallback: include in zi
+    const day = parseInt(m[1]);
+    const mon = months[(m[2]||'').toLowerCase().replace('.','').substring(0,3)];
+    const yearM = raw.match(/(\d{4})/);
+    const year = yearM ? parseInt(yearM[1]) : now.getFullYear();
+    const d = new Date(year, mon!==undefined?mon:now.getMonth(), day);
+    if(period==='zi') return d.toDateString()===now.toDateString();
+    if(period==='luna') return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+    if(period==='an') return d.getFullYear()===now.getFullYear();
+    return true;
+  });
+}
+
+function periodLabel(period){
+  const now = new Date();
+  if(period==='zi') return now.toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
+  if(period==='luna') return now.toLocaleDateString('ro-RO',{month:'long',year:'numeric'});
+  if(period==='an') return String(now.getFullYear());
+  return '';
+}
+
+function exportXLS(period){
+  const rows = getFilteredHistory(period);
+  const label = periodLabel(period);
+  const plus = rows.filter(r=>r.pts>0).reduce((s,r)=>s+r.pts,0);
+  const minus = rows.filter(r=>r.pts<0).reduce((s,r)=>s+r.pts,0);
+
+  let csv = '\uFEFF'; // BOM for Excel UTF-8
+  csv += `Raport Eve — ${label}\n`;
+  csv += `Stele castigate,${plus}\n`;
+  csv += `Stele folosite,${Math.abs(minus)}\n`;
+  csv += `Total disponibil,${state.stars}\n`;
+  csv += `Valoare (RON),${(state.stars*STAR_VAL).toFixed(2)}\n\n`;
+  csv += 'Data,Activitate,Stele\n';
+  [...rows].reverse().forEach(r=>{
+    const pts = r.pts>0?'+'+r.pts:String(r.pts);
+    csv += `"${r.time}","${r.desc}",${pts}\n`;
+  });
+
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`eve-raport-${period}-${label.replace(/\s/g,'-')}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Export XLS descărcat!');
+}
+
+function exportPDF(period){
+  const rows = getFilteredHistory(period);
+  const label = periodLabel(period);
+  const plus = rows.filter(r=>r.pts>0).reduce((s,r)=>s+r.pts,0);
+  const minus = rows.filter(r=>r.pts<0).reduce((s,r)=>s+r.pts,0);
+
+  const tableRows = [...rows].reverse().map(r=>{
+    const color = r.pts>0?'#27500A':r.pts<0?'#993C1D':'#888';
+    const pts = r.pts>0?'+'+r.pts:r.pts===0?'—':String(r.pts);
+    return `<tr>
+      <td style="padding:5px 8px;border-bottom:1px solid #f0efe8;font-size:11px;color:#888">${r.time||''}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #f0efe8;font-size:11px">${r.desc||''}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #f0efe8;font-size:12px;font-weight:700;color:${color};text-align:right">${pts}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Raport Eve — ${label}</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:32px;color:#1a1a1a;max-width:700px;margin:0 auto}
+    h1{font-size:22px;color:#534AB7;margin-bottom:4px}
+    .subtitle{font-size:13px;color:#888;margin-bottom:20px}
+    .summary{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+    .card{background:#f5f4f0;border-radius:10px;padding:12px 18px;min-width:120px}
+    .card-val{font-size:22px;font-weight:700}
+    .card-lbl{font-size:11px;color:#888;margin-top:2px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#888;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid #ebe9e0}
+    @media print{body{padding:16px}}
+  </style></head><body>
+  <h1>⭐ Stelutele lui Eve</h1>
+  <div class="subtitle">Raport ${period==='zi'?'zilnic':period==='luna'?'lunar':'anual'} — ${label}</div>
+  <div class="summary">
+    <div class="card"><div class="card-val" style="color:#3B6D11">+${plus}</div><div class="card-lbl">stele câștigate</div></div>
+    <div class="card"><div class="card-val" style="color:#993C1D">${minus}</div><div class="card-lbl">stele folosite</div></div>
+    <div class="card"><div class="card-val" style="color:#534AB7">${state.stars}</div><div class="card-lbl">total disponibil</div></div>
+    <div class="card"><div class="card-val" style="color:#27500A">${(state.stars*STAR_VAL).toFixed(2)} RON</div><div class="card-lbl">valoare</div></div>
+  </div>
+  <table><thead><tr><th>Data</th><th>Activitate</th><th style="text-align:right">Stele</th></tr></thead>
+  <tbody>${tableRows||'<tr><td colspan="3" style="padding:12px;color:#bbb;text-align:center">Nicio activitate in aceasta perioada</td></tr>'}</tbody></table>
+  <p style="margin-top:24px;font-size:10px;color:#bbb;text-align:center">Generat de Stelutele lui Eve · ${new Date().toLocaleDateString('ro-RO')}</p>
+  </body></html>`;
+
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url,'_blank');
+  if(win) setTimeout(()=>{win.print();},600);
+  else { const a=document.createElement('a');a.href=url;a.download=`eve-raport-${period}-${label.replace(/\s/g,'-')}.html`;a.click(); }
+  URL.revokeObjectURL(url);
+  showToast('PDF pregătit pentru tipărire!');
+}
+
+// ── BACKUP & IMPORT ────────────────────────────────────────
+function exportBackup(){
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\./g,'-');
+  const timeStr = now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  const filename = `eve-backup-${dateStr}-${timeStr}.json`;
+
+  const backup = {
+    version: 'eve_v6',
+    exportedAt: now.toISOString(),
+    data: state
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+
+  const st = document.getElementById('backupStatus');
+  st.style.color = '#3B6D11';
+  st.textContent = '✓ Backup salvat: ' + filename;
+  setTimeout(()=>{ if(st) st.textContent=''; }, 4000);
+  showToast('💾 Backup salvat!');
+}
+
+function importBackup(input){
+  const file = input.files[0];
+  if(!file){ return; }
+  const st = document.getElementById('backupStatus');
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const parsed = JSON.parse(e.target.result);
+
+      // Accepta fie formatul cu { version, data } fie direct state-ul
+      const imported = parsed.data || parsed;
+
+      // Validare minimala — trebuie sa aiba stele si history
+      if(typeof imported.stars === 'undefined'){
+        st.style.color = '#E24B4A';
+        st.textContent = '✗ Fisier invalid — nu pare a fi un backup Eve.';
+        input.value='';
+        return;
+      }
+
+      if(!confirm(`Importi backup din ${parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('ro-RO') : 'data necunoscuta'}.\n\nAceasta va INLOCUI toate datele curente ale Evei!\n\nContinui?`)){
+        input.value='';
+        return;
+      }
+
+      // Asigura campuri lipsa pentru compatibilitate
+      if(!imported.dailyCounts) imported.dailyCounts = {};
+      if(!imported.weeklyCounts) imported.weeklyCounts = {};
+      if(!imported.penaltiesApplied) imported.penaltiesApplied = [];
+      if(!imported.extraPoints) imported.extraPoints = [];
+      if(!imported.weekKey) imported.weekKey = getWeekKey();
+      if(!imported.spentToday) imported.spentToday = 0;
+      if(!imported.history) imported.history = [];
+
+      state = imported;
+      save();
+      updateUI();
+
+      st.style.color = '#3B6D11';
+      st.textContent = '✓ Date restaurate cu succes! ' + imported.stars + ' stele incarcate.';
+      setTimeout(()=>{ if(st) st.textContent=''; }, 5000);
+      showToast('📂 Backup restaurat cu succes!');
+    } catch(err){
+      st.style.color = '#E24B4A';
+      st.textContent = '✗ Eroare la citirea fisierului. Asigura-te ca e un backup valid.';
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ── ZI ANTERIOARA ──────────────────────────────────────────
+let yesterdayPending = {}; // sarcini selectate in modal, inainte de salvare
+
+function openYesterdayModal(){
+  // Reset stare modala
+  yesterdayPending = Object.assign({}, state.yesterdayDone);
+  document.getElementById('yesterdayPwd').value='';
+  document.getElementById('yesterdayPwdErr').classList.remove('show');
+  document.getElementById('yesterdayPwd').classList.remove('err');
+  document.getElementById('yesterdayPwdSection').style.display='block';
+  document.getElementById('yesterdayTaskSection').style.display='none';
+  document.getElementById('yesterdayModalDesc').textContent='Introdu parola pentru a accesa sarcinile de ieri.';
+  document.getElementById('yesterdayModal').style.display='flex';
+  setTimeout(()=>document.getElementById('yesterdayPwd').focus(),100);
+}
+
+function closeYesterdayModal(){
+  document.getElementById('yesterdayModal').style.display='none';
+  yesterdayPending={};
+}
+
+function unlockYesterday(){
+  const pwd = document.getElementById('yesterdayPwd').value;
+  if(pwd!==RESET_PASSWORD){
+    document.getElementById('yesterdayPwdErr').classList.add('show');
+    document.getElementById('yesterdayPwd').classList.add('err');
+    document.getElementById('yesterdayPwd').focus();
+    return;
+  }
+  // Arata sectiunea cu sarcini
+  document.getElementById('yesterdayPwdSection').style.display='none';
+  document.getElementById('yesterdayTaskSection').style.display='block';
+  document.getElementById('yesterdayModalDesc').textContent=
+    `Sarcini pentru ${formatYesterdayDate()} — bifeaza ce a facut Eve:`;
+  renderYesterdayTasks();
+}
+
+function renderYesterdayTasks(){
+  const allTasks = [...TASKS1, ...TASKS2];
+  const yKey = getYesterdayKey();
+  const alreadyUsed = state.yesterdayKey === yKey; // panoul a mai fost deschis pentru aceeasi zi de ieri
+
+  // Calculeaza bonusuri curente in pending
+  const done1 = TASKS1.every(t=>yesterdayPending[t.id]);
+  const done2 = TASKS2.every(t=>yesterdayPending[t.id]);
+
+  let html = '';
+
+  // Rutina
+  html += `<div style="font-size:10px;font-weight:700;color:#3B6D11;letter-spacing:.05em;text-transform:uppercase;margin:4px 0 6px">Rutina zilnica</div>`;
+  html += TASKS1.map(t=>{
+    const isDone = !!yesterdayPending[t.id];
+    const wasAlreadySaved = alreadyUsed && !!state.yesterdayDone[t.id];
+    return `<div class="yesterday-task-row${isDone?' done':''}" onclick="toggleYesterdayTask('${t.id}')">
+      <div class="task-dot">${isDone?'✓':''}</div>
+      <span class="task-text">${t.name}${wasAlreadySaved?' ✓':''}</span>
+      <span class="task-pts">+${t.pts}⭐</span>
+    </div>`;
+  }).join('');
+
+  // Bonus rutina indicator
+  html += `<div class="yesterday-bonus-strip b1${done1?' earned1':''}">
+    <div style="flex:1;font-size:11px;font-weight:700;color:#27500A">🏆 Bonus Rutina</div>
+    <div style="font-size:11px;font-weight:700;color:${done1?'#3B6D11':'#aaa'}">${done1?'+'+BONUS1+' ⭐ obtinut!':'necesita toate ('+BONUS1+' ⭐)'}</div>
+  </div>`;
+
+  // Comportament
+  html += `<div style="font-size:10px;font-weight:700;color:#3C3489;letter-spacing:.05em;text-transform:uppercase;margin:10px 0 6px">Comportament</div>`;
+  html += TASKS2.map(t=>{
+    const isDone = !!yesterdayPending[t.id];
+    const wasAlreadySaved = alreadyUsed && !!state.yesterdayDone[t.id];
+    return `<div class="yesterday-task-row${isDone?' done':''}" onclick="toggleYesterdayTask('${t.id}')">
+      <div class="task-dot">${isDone?'✓':''}</div>
+      <span class="task-text">${t.name}${wasAlreadySaved?' ✓':''}</span>
+      <span class="task-pts">+${t.pts}⭐</span>
+    </div>`;
+  }).join('');
+
+  // Bonus comportament indicator
+  html += `<div class="yesterday-bonus-strip b2${done2?' earned2':''}">
+    <div style="flex:1;font-size:11px;font-weight:700;color:#3C3489">🏆 Bonus Comportament</div>
+    <div style="font-size:11px;font-weight:700;color:${done2?'#534AB7':'#aaa'}">${done2?'+'+BONUS2+' ⭐ obtinut!':'necesita toate ('+BONUS2+' ⭐)'}</div>
+  </div>`;
+
+  if(alreadyUsed){
+    html += `<div style="font-size:10px;color:#E67E22;margin-top:8px;text-align:center">⚠️ Ai mai editat ieri — doar sarcinile noi fata de salvarea anterioara vor adauga puncte.</div>`;
+  }
+
+  document.getElementById('yesterdayTasksInner').innerHTML = html;
+}
+
+function toggleYesterdayTask(id){
+  yesterdayPending[id] = !yesterdayPending[id];
+  renderYesterdayTasks();
+}
+
+function saveYesterdayAndClose(){
+  const yKey = getYesterdayKey();
+  const prevDone = state.yesterdayKey===yKey ? state.yesterdayDone : {};
+  const yDate = formatYesterdayDate();
+  const now = new Date();
+  const timeStr = now.toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
+                  now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  let totalAdded = 0;
+
+  // Adauga puncte doar pentru sarcini NOI bifate (care nu erau in salvarea anterioara)
+  const allTasks = [...TASKS1,...TASKS2];
+  allTasks.forEach(t=>{
+    if(yesterdayPending[t.id] && !prevDone[t.id]){
+      state.stars += t.pts;
+      state.earnedMonth += t.pts;
+      totalAdded += t.pts;
+      addHist(`[Ieri — ${yDate}] ${t.name}`, t.pts);
+    }
+    // Daca a debifat ceva ce era deja salvat — scadem
+    if(!yesterdayPending[t.id] && prevDone[t.id]){
+      state.stars = Math.max(0, state.stars - t.pts);
+      state.earnedMonth = Math.max(0, state.earnedMonth - t.pts);
+      totalAdded -= t.pts;
+      addHist(`[Ieri — ${yDate}] Anulat: ${t.name}`, -t.pts);
+    }
+  });
+
+  // Verifica bonusuri
+  const prevBonus1 = TASKS1.every(t=>prevDone[t.id]);
+  const newBonus1  = TASKS1.every(t=>yesterdayPending[t.id]);
+  if(newBonus1 && !prevBonus1){
+    state.stars += BONUS1; state.earnedMonth += BONUS1; totalAdded += BONUS1;
+    addHist(`[Ieri — ${yDate}] Bonus Rutina zilnica!`, BONUS1);
+  } else if(!newBonus1 && prevBonus1){
+    state.stars = Math.max(0, state.stars-BONUS1); state.earnedMonth = Math.max(0,state.earnedMonth-BONUS1); totalAdded -= BONUS1;
+    addHist(`[Ieri — ${yDate}] Bonus Rutina anulat`, -BONUS1);
+  }
+
+  const prevBonus2 = TASKS2.every(t=>prevDone[t.id]);
+  const newBonus2  = TASKS2.every(t=>yesterdayPending[t.id]);
+  if(newBonus2 && !prevBonus2){
+    state.stars += BONUS2; state.earnedMonth += BONUS2; totalAdded += BONUS2;
+    addHist(`[Ieri — ${yDate}] Bonus Comportament!`, BONUS2);
+  } else if(!newBonus2 && prevBonus2){
+    state.stars = Math.max(0, state.stars-BONUS2); state.earnedMonth = Math.max(0,state.earnedMonth-BONUS2); totalAdded -= BONUS2;
+    addHist(`[Ieri — ${yDate}] Bonus Comportament anulat`, -BONUS2);
+  }
+
+  // Salveaza starea de ieri
+  state.yesterdayDone = Object.assign({}, yesterdayPending);
+  state.yesterdayKey = yKey;
+
+  closeYesterdayModal();
+  if(totalAdded>0) showToast(`+${totalAdded} stele adaugate pentru ieri! ⭐`);
+  else if(totalAdded<0) showToast(`${totalAdded} stele ajustate pentru ieri`);
+  else showToast('Nicio modificare.');
   save(); updateUI();
 }
 
