@@ -74,7 +74,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-yesterday:hover{background:#EEEDFE;border-color:#AFA9EC}
 .yesterday-task-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #ebe9e0;border-radius:10px;padding:9px 11px;cursor:pointer;transition:all .15s;width:100%;text-align:left;margin-bottom:5px}
 .yesterday-task-row:hover{border-color:#AFA9EC;background:#EEEDFE}
-.yesterday-task-row.done{background:#EAF3DE;border-color:#97C459;cursor:default}
+.yesterday-task-row.done{background:#EAF3DE;border-color:#97C459;cursor:pointer}
+.yesterday-task-row.done:hover{background:#d4edbc}
 .yesterday-task-row.done .task-dot{background:#3B6D11;border-color:#3B6D11;color:#fff}
 .yesterday-task-row.done .task-text{color:#27500A}
 .yesterday-task-row.done .task-pts{color:#3B6D11}
@@ -540,11 +541,16 @@ function load(){
                 new Date().toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})
         });
       }
+      // Pastreaza yesterdayDone/yesterdayKey — nu se sterg la zi noua
+      const keptYD  = s.yesterdayDone || {};
+      const keptYK  = s.yesterdayKey  || '';
       s.done={}; s.bonus1Given=false; s.bonus2Given=false;
       s.todayKey=getTodayKey();
       s.dailyCounts={};
       s.spentToday=0;
       s.penaltiesApplied=[];
+      s.yesterdayDone = keptYD;
+      s.yesterdayKey  = keptYK;
     }
 
     if(!s.dailyCounts) s.dailyCounts={};
@@ -821,11 +827,16 @@ function redeem(id){
 function resetDay(){
   if(!confirm('Incepi o zi noua? Bifele de azi se sterg, dar stelele raman!')) return;
   const carried = state.stars;
+  // Pastreaza yesterdayDone/yesterdayKey — nu se sterg la zi noua
+  const keptYesterdayDone = state.yesterdayDone || {};
+  const keptYesterdayKey  = state.yesterdayKey  || '';
   state.done={}; state.bonus1Given=false; state.bonus2Given=false;
   state.todayKey=getTodayKey();
   state.dailyCounts={};
   state.spentToday=0;
   state.penaltiesApplied=[];
+  state.yesterdayDone = keptYesterdayDone;
+  state.yesterdayKey  = keptYesterdayKey;
   if(!state.extraPoints) state.extraPoints=[];
   if(state.weekKey!==getWeekKey()){
     state.weekKey=getWeekKey();
@@ -863,13 +874,16 @@ function tryReset(type){
   }
   closeResetModal();
   if(type==='day'){
-    // Resetare zi: stele raman, bifele si contoarele zilnice se sterg
     const carried=state.stars;
+    const keptYesterdayDone = state.yesterdayDone || {};
+    const keptYesterdayKey  = state.yesterdayKey  || '';
     state.done={}; state.bonus1Given=false; state.bonus2Given=false;
     state.todayKey=getTodayKey();
     state.dailyCounts={};
     state.spentToday=0;
     state.penaltiesApplied=[];
+    state.yesterdayDone = keptYesterdayDone;
+    state.yesterdayKey  = keptYesterdayKey;
     if(!state.extraPoints) state.extraPoints=[];
     if(state.weekKey!==getWeekKey()){state.weekKey=getWeekKey();state.weeklyCounts={};}
     if(carried>0) addHist('↩ Reset zi — reportat: '+carried+' stele',0);
@@ -1198,8 +1212,13 @@ function importBackup(input){
 let yesterdayPending = {}; // sarcini selectate in modal, inainte de salvare
 
 function openYesterdayModal(){
-  // Reset stare modala
-  yesterdayPending = Object.assign({}, state.yesterdayDone);
+  // Incarca bifele salvate DOAR daca se refera la aceeasi zi de "ieri" ca astazi
+  const yKey = getYesterdayKey();
+  if(state.yesterdayKey === yKey){
+    yesterdayPending = Object.assign({}, state.yesterdayDone);
+  } else {
+    yesterdayPending = {};
+  }
   document.getElementById('yesterdayPwd').value='';
   document.getElementById('yesterdayPwdErr').classList.remove('show');
   document.getElementById('yesterdayPwd').classList.remove('err');
