@@ -4,6 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stelutele lui Eve</title>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_Hi_CmuwiX-pqYXoJ-CfX-q9-26i_XrA",
+    authDomain: "eve-recompense.firebaseapp.com",
+    databaseURL: "https://eve-recompense-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "eve-recompense",
+    storageBucket: "eve-recompense.firebasestorage.app",
+    messagingSenderId: "867315971107",
+    appId: "1:867315971107:web:1fdcd7193bef08e09b6d96"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db, 'eve/state');
+
+  // Expune functiile pe window ca sa fie accesibile din scriptul principal
+  window._fbSave = function(stateObj) {
+    set(dbRef, stateObj).catch(e => console.error('Firebase save error:', e));
+  };
+
+  window._fbListen = function(callback) {
+    onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      callback(data);
+    }, (error) => {
+      console.error('Firebase listen error:', error);
+      callback(null);
+    });
+  };
+
+  // Semnaleaza ca Firebase e gata
+  window._fbReady = true;
+  document.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh}
@@ -181,6 +219,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="star-num" id="totalStars">0</div>
     <div style="font-size:12px;color:#aaa;margin-bottom:4px">stele acumulate (se reporteaza mereu &#8594;)</div>
     <div class="money-pill" id="moneyPill">= 0.00 RON</div>
+    <div id="syncStatus" style="font-size:10px;margin-top:4px;color:#aaa">⏳ Se conecteaza...</div>
   </div>
 
   <!-- NIVELURI LUNARE -->
@@ -261,6 +300,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div style="font-size:11px;color:#c0392b;margin:-2px 0 6px;padding:0 2px">Apasa pentru a aplica o penalizare. Anulare doar cu parola.</div>
     <div class="tasks-list" id="penaltiesGrid"></div>
+    <div id="customPenaltiesList"></div>
+    <div class="extra-add-row" style="margin-top:4px">
+      <input class="extra-add-input" id="customPenaltyInput" type="text" placeholder="Alt comportament gresit..." maxlength="60"
+        onkeydown="if(event.key==='Enter')addCustomPenalty()" style="border-color:#EBA8C0"/>
+      <button class="extra-add-btn" onclick="addCustomPenalty()" style="background:#FBEAF0;border-color:#EBA8C0;color:#72243E">- 3 ⭐</button>
+    </div>
 
     <button class="day-btn" onclick="resetDay()">&#8635; Incepe o zi noua</button>
     <button class="btn-yesterday" onclick="openYesterdayModal()">&#8592; Adauga puncte pentru ieri</button>
@@ -493,77 +538,91 @@ let state = {
   weeklyCounts: {},
 };
 
-function save(){try{localStorage.setItem('eve_v6',JSON.stringify(state))}catch(e){}}
+// ── FIREBASE SYNC ──────────────────────────────────────────
+let _fbInitialized = false;
+let _saveTimeout = null;
+
+function setSyncStatus(msg, color){
+  const el = document.getElementById('syncStatus');
+  if(el){ el.textContent = msg; el.style.color = color||'#aaa'; }
+}
+
+function save(){
+  // Debounce: asteapta 600ms dupa ultima modificare inainte sa salveze
+  clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(()=>{
+    if(window._fbSave){
+      window._fbSave(state);
+      setSyncStatus('✓ Sincronizat', '#3B6D11');
+      setTimeout(()=>setSyncStatus('☁️ Firebase sync', '#aaa'), 2000);
+    } else {
+      // Fallback localStorage daca Firebase nu e disponibil
+      try{ localStorage.setItem('eve_v6', JSON.stringify(state)); }catch(e){}
+    }
+  }, 600);
+}
+
+function applyLoadedState(s){
+  if(!s){ updateUI(); return; }
+
+  // Reset LUNA
+  if(s.monthKey!==getMonthKey()){
+    if(s.stars>0){ s.history=s.history||[]; s.history.push({desc:`↩ Reportat din luna precedenta: ${s.stars} stele`,pts:0,time:new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short',year:'numeric'})}); }
+    s.spentLv1=0; s.spentTotal=0; s.earnedMonth=0; s.spentMonth=0; s.monthKey=getMonthKey();
+  }
+  // Reset SAPTAMANA
+  if(s.weekKey!==getWeekKey()){
+    if(s.stars>0){ s.history=s.history||[]; s.history.push({desc:`↩ Reportat in saptamana noua: ${s.stars} stele`,pts:0,time:new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})}); }
+    s.weekKey=getWeekKey(); s.weeklyCounts={};
+  }
+  // Reset ZI
+  if(s.todayKey!==getTodayKey()){
+    if(s.stars>0){ s.history=s.history||[]; s.history.push({desc:`↩ Reportat in ziua noua: ${s.stars} stele`,pts:0,time:new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+new Date().toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}); }
+    const keptYD=s.yesterdayDone||{}; const keptYK=s.yesterdayKey||'';
+    s.done={}; s.bonus1Given=false; s.bonus2Given=false;
+    s.todayKey=getTodayKey(); s.dailyCounts={}; s.spentToday=0; s.penaltiesApplied=[];
+    s.yesterdayDone=keptYD; s.yesterdayKey=keptYK;
+  }
+  // Fallback-uri campuri lipsa
+  if(!s.dailyCounts) s.dailyCounts={};
+  if(!s.weeklyCounts) s.weeklyCounts={};
+  if(!s.weekKey) s.weekKey=getWeekKey();
+  if(!s.spentToday) s.spentToday=0;
+  if(!s.penaltiesApplied) s.penaltiesApplied=[];
+  if(!s.extraPoints) s.extraPoints=[];
+  if(!s.yesterdayDone) s.yesterdayDone={};
+  if(!s.yesterdayKey) s.yesterdayKey='';
+  if(s.history && s.history.length>200) s.history=s.history.slice(-200);
+  state=s;
+  updateUI();
+}
+
 function load(){
-  try{
-    const d=localStorage.getItem('eve_v6');
-    if(!d) return;
-    const s=JSON.parse(d);
-
-    // Reset LUNA — stelele raman, doar contoarele de cheltuieli se reseteaza
-    if(s.monthKey!==getMonthKey()){
-      const carried = s.stars; // stele ramase
-      if(carried>0) s.history=s.history||[];
-      s.history.push({
-        desc:`↩ Reportat din luna precedenta: ${carried} stele`,
-        pts:0,
-        time: new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short',year:'numeric'})
-      });
-      s.spentLv1=0; s.spentTotal=0;
-      s.earnedMonth=0; s.spentMonth=0;
-      s.monthKey=getMonthKey();
-    }
-
-    // Reset SAPTAMANA — doar contoare saptamanale + log
-    if(s.weekKey!==getWeekKey()){
-      const carried = s.stars;
-      if(carried>0){
-        s.history=s.history||[];
-        s.history.push({
-          desc:`↩ Reportat in saptamana noua: ${carried} stele`,
-          pts:0,
-          time: new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})
-        });
+  // Firebase listener — se apeleaza la init si la orice modificare din alta sesiune
+  if(window._fbListen && !_fbInitialized){
+    _fbInitialized = true;
+    setSyncStatus('⏳ Se incarca...', '#E67E22');
+    window._fbListen((data)=>{
+      if(!data){
+        // Prima rulare — nu exista date in Firebase, incearca localStorage ca migrare
+        const local = localStorage.getItem('eve_v6');
+        if(local){ try{ applyLoadedState(JSON.parse(local)); save(); }catch(e){ updateUI(); } }
+        else { updateUI(); }
+        setSyncStatus('☁️ Firebase sync', '#aaa');
+        return;
       }
-      s.weekKey=getWeekKey();
-      s.weeklyCounts={};
-    }
-
-    // Reset ZI — bifele zilnice si contoare zilnice + log
-    if(s.todayKey!==getTodayKey()){
-      const carried = s.stars;
-      if(carried>0){
-        s.history=s.history||[];
-        s.history.push({
-          desc:`↩ Reportat in ziua noua: ${carried} stele`,
-          pts:0,
-          time: new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
-                new Date().toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})
-        });
-      }
-      // Pastreaza yesterdayDone/yesterdayKey — nu se sterg la zi noua
-      const keptYD  = s.yesterdayDone || {};
-      const keptYK  = s.yesterdayKey  || '';
-      s.done={}; s.bonus1Given=false; s.bonus2Given=false;
-      s.todayKey=getTodayKey();
-      s.dailyCounts={};
-      s.spentToday=0;
-      s.penaltiesApplied=[];
-      s.yesterdayDone = keptYD;
-      s.yesterdayKey  = keptYK;
-    }
-
-    if(!s.dailyCounts) s.dailyCounts={};
-    if(!s.weeklyCounts) s.weeklyCounts={};
-    if(!s.weekKey) s.weekKey=getWeekKey();
-    if(!s.spentToday) s.spentToday=0;
-    if(!s.penaltiesApplied) s.penaltiesApplied=[];
-    if(!s.extraPoints) s.extraPoints=[];
-    if(!s.yesterdayDone) s.yesterdayDone={};
-    if(!s.yesterdayKey) s.yesterdayKey='';
-    if(s.history && s.history.length>200) s.history=s.history.slice(-200);
-    state=s;
-  }catch(e){}
+      applyLoadedState(data);
+      setSyncStatus('☁️ Firebase sync', '#aaa');
+    });
+  } else if(!window._fbListen){
+    // Fallback localStorage
+    try{
+      const d=localStorage.getItem('eve_v6');
+      if(d) applyLoadedState(JSON.parse(d));
+      else updateUI();
+    }catch(e){ updateUI(); }
+    setSyncStatus('⚠️ Offline (local)', '#E67E22');
+  }
 }
 
 function addHist(desc,pts){
@@ -890,10 +949,11 @@ function tryReset(type){
     else addHist('Reset zi efectuat',0);
     showToast('Zi resetata! Stele pastrate: '+carried);
   } else {
-    // Resetare totala: sterge tot din localStorage
+    // Resetare totala: sterge datele din Firebase si localStorage
+    if(window._fbSave){ window._fbSave(null); }
     try{localStorage.removeItem('eve_v6');}catch(e){}
     showToast('Toate datele au fost sterse. Repornire...');
-    setTimeout(()=>location.reload(), 1200);
+    setTimeout(()=>location.reload(), 1500);
     return;
   }
   save(); updateUI();
@@ -903,7 +963,6 @@ function renderPenalties(){
   const grid = document.getElementById('penaltiesGrid');
   if(!grid) return;
   grid.innerHTML = PENALTIES.map(p => {
-    // Numara de cate ori s-a aplicat azi
     const timesApplied = state.penaltiesApplied.filter(x=>x.id===p.id).length;
     const isActive = timesApplied > 0;
     const countLabel = timesApplied > 1 ? ` (x${timesApplied})` : '';
@@ -914,6 +973,50 @@ function renderPenalties(){
       ${isActive?`<button class="penalty-undo-btn" onclick="event.stopPropagation();openPenaltyUndoModal('${p.id}')">Anuleaza</button>`:''}
     </div>`;
   }).join('');
+  renderCustomPenalties();
+}
+
+function renderCustomPenalties(){
+  const list = document.getElementById('customPenaltiesList');
+  if(!list) return;
+  // Afiseaza doar penalizarile custom (id incepe cu 'custom_')
+  const customs = state.penaltiesApplied.filter(x=>x.id && x.id.startsWith('custom_'));
+  if(customs.length===0){ list.innerHTML=''; return; }
+  // Grupeaza dupa id si text
+  const seen = {};
+  customs.forEach(x=>{ seen[x.id]=(seen[x.id]||0)+1; });
+  const unique = Object.keys(seen);
+  list.innerHTML = unique.map(id=>{
+    const entry = customs.find(x=>x.id===id);
+    const count = seen[id];
+    const countLabel = count>1?` (x${count})`:'';
+    return `<div class="penalty-row active" style="margin-top:5px">
+      <div class="penalty-dot">✗</div>
+      <span class="penalty-text">✏️ ${entry.name}${countLabel}</span>
+      <span class="penalty-pts">-${entry.pts}⭐</span>
+      <button class="penalty-undo-btn" onclick="openPenaltyUndoModal('${id}')">Anuleaza</button>
+    </div>`;
+  }).join('');
+}
+
+const CUSTOM_PENALTY_PTS = 3;
+let _customPenaltyIdx = 0;
+
+function addCustomPenalty(){
+  const input = document.getElementById('customPenaltyInput');
+  const text = (input.value||'').trim();
+  if(!text){ input.focus(); return; }
+  const id = 'custom_' + Date.now() + '_' + (++_customPenaltyIdx);
+  const now = new Date();
+  const time = now.toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
+               now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+  state.penaltiesApplied.push({id, name:text, pts:CUSTOM_PENALTY_PTS, time});
+  state.stars = Math.max(0, state.stars - CUSTOM_PENALTY_PTS);
+  state.earnedMonth = Math.max(0, state.earnedMonth - CUSTOM_PENALTY_PTS);
+  addHist('⚠️ Penalizare: '+text, -CUSTOM_PENALTY_PTS);
+  showToast('⚠️ -'+CUSTOM_PENALTY_PTS+' stele — '+text);
+  input.value='';
+  save(); updateUI();
 }
 
 function applyPenalty(id){
@@ -933,14 +1036,16 @@ function applyPenalty(id){
 let pendingUndoPenaltyId = null;
 
 function openPenaltyUndoModal(id){
+  // Functioneaza pentru penalizari predefinite si custom
   const p = PENALTIES.find(x=>x.id===id);
-  if(!p) return;
+  const name = p ? p.name : (state.penaltiesApplied.find(x=>x.id===id)||{}).name || id;
+  const pts  = p ? p.pts  : (state.penaltiesApplied.find(x=>x.id===id)||{}).pts || 3;
   pendingUndoPenaltyId = id;
   document.getElementById('penaltyPwd').value='';
   document.getElementById('penaltyPwdErr').classList.remove('show');
   document.getElementById('penaltyPwd').classList.remove('err');
   document.getElementById('penaltyModalDesc').textContent =
-    `Introdu parola pentru a anula penalizarea: "${p.name}" (-${p.pts} stele).`;
+    `Introdu parola pentru a anula penalizarea: "${name}" (-${pts} stele).`;
   document.getElementById('penaltyModal').style.display='flex';
   setTimeout(()=>document.getElementById('penaltyPwd').focus(),100);
 }
@@ -960,15 +1065,18 @@ function tryUndoPenalty(){
   }
   const id = pendingUndoPenaltyId;
   const p = PENALTIES.find(x=>x.id===id);
-  if(!p){closePenaltyModal();return;}
+  // Penalizare predefinita sau custom
+  const entry = state.penaltiesApplied.find(x=>x.id===id);
+  const pts  = p ? p.pts  : (entry ? entry.pts  : 3);
+  const name = p ? p.name : (entry ? entry.name : id);
   // Sterge ultima aparitie a acestei penalizari
   const idx = [...state.penaltiesApplied].map(x=>x.id).lastIndexOf(id);
   if(idx!==-1){
     state.penaltiesApplied.splice(idx,1);
-    state.stars += p.pts;
-    state.earnedMonth += p.pts;
-    addHist('↩ Penalizare anulata: '+p.name, p.pts);
-    showToast('↩ Penalizare anulata — +'+p.pts+' stele recuperate');
+    state.stars += pts;
+    state.earnedMonth += pts;
+    addHist('↩ Penalizare anulata: '+name, pts);
+    showToast('↩ Penalizare anulata — +'+pts+' stele recuperate');
   }
   closePenaltyModal();
   save(); updateUI();
@@ -1376,7 +1484,18 @@ function switchTab(name){
   document.getElementById('tab-'+name).classList.add('active');
 }
 
-load(); updateUI();
+// Porneste aplicatia — asteapta Firebase daca e disponibil, altfel porneste imediat
+function initApp(){
+  load();
+}
+
+if(window._fbReady){
+  initApp();
+} else {
+  document.addEventListener('firebase-ready', initApp, {once:true});
+  // Timeout safety: daca Firebase nu raspunde in 4s, porneste cu localStorage
+  setTimeout(()=>{ if(!_fbInitialized) initApp(); }, 4000);
+}
 </script>
 </body>
 </html>
