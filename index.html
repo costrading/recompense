@@ -584,6 +584,7 @@ function applyLoadedState(s){
     s.yesterdayDone=keptYD; s.yesterdayKey=keptYK;
   }
   // Fallback-uri campuri lipsa
+  if(!s.done) s.done={};
   if(!s.dailyCounts) s.dailyCounts={};
   if(!s.weeklyCounts) s.weeklyCounts={};
   if(!s.weekKey) s.weekKey=getWeekKey();
