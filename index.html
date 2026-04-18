@@ -578,10 +578,14 @@ function applyLoadedState(s){
   // Reset ZI
   if(s.todayKey!==getTodayKey()){
     if(s.stars>0){ s.history=s.history||[]; s.history.push({desc:`↩ Reportat in ziua noua: ${s.stars} stele`,pts:0,time:new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+new Date().toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}); }
-    const keptYD=s.yesterdayDone||{}; const keptYK=s.yesterdayKey||'';
+    // La trecerea in ziua noua, bifele de AZI devin "ieri"
+    // Le salvam in yesterdayDone cu cheia zilei care tocmai s-a incheiat
+    const newYesterdayDone = Object.assign({}, s.done || {});
+    const newYesterdayKey  = s.todayKey || '';
     s.done={}; s.bonus1Given=false; s.bonus2Given=false;
     s.todayKey=getTodayKey(); s.dailyCounts={}; s.spentToday=0; s.penaltiesApplied=[];
-    s.yesterdayDone=keptYD; s.yesterdayKey=keptYK;
+    s.yesterdayDone = newYesterdayDone;
+    s.yesterdayKey  = newYesterdayKey;
   }
   // Fallback-uri campuri lipsa
   if(!s.done) s.done={};
@@ -887,16 +891,16 @@ function redeem(id){
 function resetDay(){
   if(!confirm('Incepi o zi noua? Bifele de azi se sterg, dar stelele raman!')) return;
   const carried = state.stars;
-  // Pastreaza yesterdayDone/yesterdayKey — nu se sterg la zi noua
-  const keptYesterdayDone = state.yesterdayDone || {};
-  const keptYesterdayKey  = state.yesterdayKey  || '';
+  // Bifele de AZI devin "ieri" — le salvam inainte de a sterge done
+  const newYesterdayDone = Object.assign({}, state.done || {});
+  const newYesterdayKey  = state.todayKey || getTodayKey();
   state.done={}; state.bonus1Given=false; state.bonus2Given=false;
   state.todayKey=getTodayKey();
   state.dailyCounts={};
   state.spentToday=0;
   state.penaltiesApplied=[];
-  state.yesterdayDone = keptYesterdayDone;
-  state.yesterdayKey  = keptYesterdayKey;
+  state.yesterdayDone = newYesterdayDone;
+  state.yesterdayKey  = newYesterdayKey;
   if(!state.extraPoints) state.extraPoints=[];
   if(state.weekKey!==getWeekKey()){
     state.weekKey=getWeekKey();
@@ -935,15 +939,16 @@ function tryReset(type){
   closeResetModal();
   if(type==='day'){
     const carried=state.stars;
-    const keptYesterdayDone = state.yesterdayDone || {};
-    const keptYesterdayKey  = state.yesterdayKey  || '';
+    // Bifele de AZI devin "ieri"
+    const newYesterdayDone = Object.assign({}, state.done || {});
+    const newYesterdayKey  = state.todayKey || getTodayKey();
     state.done={}; state.bonus1Given=false; state.bonus2Given=false;
     state.todayKey=getTodayKey();
     state.dailyCounts={};
     state.spentToday=0;
     state.penaltiesApplied=[];
-    state.yesterdayDone = keptYesterdayDone;
-    state.yesterdayKey  = keptYesterdayKey;
+    state.yesterdayDone = newYesterdayDone;
+    state.yesterdayKey  = newYesterdayKey;
     if(!state.extraPoints) state.extraPoints=[];
     if(state.weekKey!==getWeekKey()){state.weekKey=getWeekKey();state.weeklyCounts={};}
     if(carried>0) addHist('↩ Reset zi — reportat: '+carried+' stele',0);
@@ -1414,7 +1419,11 @@ function renderYesterdayTasks(){
 }
 
 function toggleYesterdayTask(id){
-  yesterdayPending[id] = !yesterdayPending[id];
+  if(yesterdayPending[id]){
+    delete yesterdayPending[id];
+  } else {
+    yesterdayPending[id] = true;
+  }
   renderYesterdayTasks();
 }
 
