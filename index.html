@@ -1457,6 +1457,7 @@ function renderYesterdayTasks(){
   const pendingBonus2 = TASKS2.every(t => allSelected[t.id]);
 
   const hasLocked = Object.keys(yesterdayLockedDone).length > 0;
+  const hasAnyYesterdayData = hasLocked || (state.yesterdayKey === getPrevDayKey(state.todayKey));
 
   function taskRow(t){
     const isLocked = !!yesterdayLockedDone[t.id];
@@ -1483,12 +1484,11 @@ function renderYesterdayTasks(){
   let html = '';
 
   // Buton reset (arata doar daca exista date salvate anterior)
-  if(hasLocked){
-    html += `<div style="background:#FEF3E2;border:1px solid #FAC775;border-radius:9px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-      <span style="flex:1;font-size:11px;color:#633806">&#128274; Task-urile de ieri sunt needitabile. Poti reseta tot daca ai gresit.</span>
-      <button onclick="resetYesterdayData()" style="background:#FBEAF0;border:1px solid #EBA8C0;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;color:#72243E;white-space:nowrap;">&#8635; Reseteaza</button>
-    </div>`;
-  }
+  // Arata intotdeauna optiunea de reset daca exista date pentru ieri
+  html += `<div style="background:#FEF3E2;border:1px solid #FAC775;border-radius:9px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+    <span style="flex:1;font-size:11px;color:#633806">${hasLocked ? '&#128274; Task-urile bifate ieri sunt needitabile.' : '&#10133; Bifeaza task-urile finalizate ieri.'} Daca ceva e gresit, reseteaza.</span>
+    <button onclick="resetYesterdayData()" style="background:#FBEAF0;border:1px solid #EBA8C0;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;color:#72243E;white-space:nowrap;">&#8635; Reseteaza tot</button>
+  </div>`;
 
   html += `<div style="font-size:10px;font-weight:700;color:#3B6D11;letter-spacing:.05em;text-transform:uppercase;margin:4px 0 6px">&#9679; Rutina zilnica</div>`;
   html += TASKS1.map(taskRow).join('');
@@ -1519,44 +1519,45 @@ function toggleYesterdayNew(id){
 }
 
 function resetYesterdayData(){
-  if(!confirm('Esti sigur? Se sterg toate punctele adaugate prin panoul "ieri" si se recalculeaza istoricul.')) return;
+  if(!confirm('Esti sigur? Se sterg TOATE punctele adaugate prin panoul "ieri" (inclusiv din stele si istoric) si poti re-adauga de la zero.')) return;
 
-  const yKey  = getPrevDayKey(state.todayKey);
   const yDate = formatYesterdayDate();
-  const saved = getSavedDayState(yKey);
-  if(!saved) return;
+  const yKey  = getPrevDayKey(state.todayKey);
 
-  const prevDone   = saved.done   || {};
-  const prevBonus1 = !!saved.bonus1;
-  const prevBonus2 = !!saved.bonus2;
-  const allTasks   = [...TASKS1, ...TASKS2];
-
-  // Scade toate punctele adaugate anterior prin panoul "ieri"
-  allTasks.forEach(t=>{
-    if(prevDone[t.id]){
-      state.stars = Math.max(0, state.stars - t.pts);
-      state.earnedMonth = Math.max(0, state.earnedMonth - t.pts);
-    }
+  // Calculeaza net-ul REAL din history (sursa de adevar, nu yesterdayDone care poate fi gresit)
+  const allTasks = [...TASKS1, ...TASKS2];
+  let netPts = 0;
+  (state.history || []).forEach(e => {
+    if(!e.desc || !e.desc.startsWith('[Ieri')) return;
+    netPts += e.pts;
   });
-  if(prevBonus1){ state.stars = Math.max(0, state.stars - BONUS1); state.earnedMonth = Math.max(0, state.earnedMonth - BONUS1); }
-  if(prevBonus2){ state.stars = Math.max(0, state.stars - BONUS2); state.earnedMonth = Math.max(0, state.earnedMonth - BONUS2); }
 
-  // Sterge intrarile din history legate de ziua de ieri
+  // Scade din stele exact ce s-a adaugat net prin history [Ieri]
+  if(netPts > 0){
+    state.stars = Math.max(0, state.stars - netPts);
+    state.earnedMonth = Math.max(0, state.earnedMonth - netPts);
+  } else if(netPts < 0){
+    // Daca net e negativ (s-a scos mai mult decat s-a adaugat), adauga inapoi
+    state.stars += Math.abs(netPts);
+    state.earnedMonth += Math.abs(netPts);
+  }
+
+  // Sterge toate intrarile [Ieri ...] din history
   state.history = (state.history || []).filter(e => !e.desc || !e.desc.startsWith('[Ieri'));
 
-  // Sterge din dailyHistory si yesterdayDone
-  if(state.dailyHistory) delete state.dailyHistory[yKey];
+  // Sterge yesterdayDone, yesterdayKey, dailyHistory pentru ziua de ieri
   state.yesterdayDone = {};
   state.yesterdayKey  = '';
+  if(state.dailyHistory) delete state.dailyHistory[yKey];
 
   // Reseteaza starea locala a modalului
   yesterdayLockedDone = {};
   yesterdayNewDone    = {};
 
-  addHist('[Ieri \u2014 ' + yDate + '] Resetat complet', 0);
-  showToast('Date pentru ieri resetate.');
+  addHist('[Ieri — ' + yDate + '] Resetat complet — re-adauga de la zero', 0);
+  showToast('Date pentru ieri sterse. Punctele au fost ajustate.');
+  save(); updateUI();
   renderYesterdayTasks();
-  // Nu inchidem modalul — userul poate re-adauga dupa reset
 }
 
 function saveYesterdayAndClose(){
