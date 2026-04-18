@@ -514,6 +514,16 @@ function getMonthKey(){const d=new Date();return `${d.getFullYear()}-${d.getMont
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
 function getWeekKey(){const d=new Date();const jan=new Date(d.getFullYear(),0,1);const w=Math.ceil(((d-jan)/86400000+jan.getDay()+1)/7);return `${d.getFullYear()}-W${w}`}
 function getYesterdayKey(){const d=new Date(Date.now()-86400000);return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
+// Derivă cheia pentru "ieri" pornind de la un todayKey stocat (ex: "2025-3-17")
+// Mai robust decât Date.now()-86400000 pentru comparatii cu state.todayKey
+function getPrevDayKey(todayKeyStr){
+  if(!todayKeyStr) return getYesterdayKey();
+  const parts = todayKeyStr.split('-');
+  if(parts.length!==3) return getYesterdayKey();
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
+  d.setDate(d.getDate()-1);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
 function formatYesterdayDate(){const d=new Date(Date.now()-86400000);return d.toLocaleDateString('ro-RO',{weekday:'long',day:'numeric',month:'long'})}
 
 let state = {
@@ -578,14 +588,13 @@ function applyLoadedState(s){
   // Reset ZI
   if(s.todayKey!==getTodayKey()){
     if(s.stars>0){ s.history=s.history||[]; s.history.push({desc:`↩ Reportat in ziua noua: ${s.stars} stele`,pts:0,time:new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+new Date().toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}); }
-    // La trecerea in ziua noua, bifele de AZI devin "ieri"
-    // Le salvam in yesterdayDone cu cheia zilei care tocmai s-a incheiat
-    const newYesterdayDone = Object.assign({}, s.done || {});
-    const newYesterdayKey  = s.todayKey || '';
+    // yesterdayDone si yesterdayKey nu se ating — sunt gestionate doar de panoul "ieri"
+    const keptYD = s.yesterdayDone || {};
+    const keptYK = s.yesterdayKey  || '';
     s.done={}; s.bonus1Given=false; s.bonus2Given=false;
     s.todayKey=getTodayKey(); s.dailyCounts={}; s.spentToday=0; s.penaltiesApplied=[];
-    s.yesterdayDone = newYesterdayDone;
-    s.yesterdayKey  = newYesterdayKey;
+    s.yesterdayDone = keptYD;
+    s.yesterdayKey  = keptYK;
   }
   // Fallback-uri campuri lipsa
   if(!s.done) s.done={};
@@ -891,16 +900,16 @@ function redeem(id){
 function resetDay(){
   if(!confirm('Incepi o zi noua? Bifele de azi se sterg, dar stelele raman!')) return;
   const carried = state.stars;
-  // Bifele de AZI devin "ieri" — le salvam inainte de a sterge done
-  const newYesterdayDone = Object.assign({}, state.done || {});
-  const newYesterdayKey  = state.todayKey || getTodayKey();
+  // yesterdayDone si yesterdayKey nu se ating — sunt gestionate doar de panoul "ieri"
+  const keptYD = state.yesterdayDone || {};
+  const keptYK = state.yesterdayKey  || '';
   state.done={}; state.bonus1Given=false; state.bonus2Given=false;
   state.todayKey=getTodayKey();
   state.dailyCounts={};
   state.spentToday=0;
   state.penaltiesApplied=[];
-  state.yesterdayDone = newYesterdayDone;
-  state.yesterdayKey  = newYesterdayKey;
+  state.yesterdayDone = keptYD;
+  state.yesterdayKey  = keptYK;
   if(!state.extraPoints) state.extraPoints=[];
   if(state.weekKey!==getWeekKey()){
     state.weekKey=getWeekKey();
@@ -939,16 +948,16 @@ function tryReset(type){
   closeResetModal();
   if(type==='day'){
     const carried=state.stars;
-    // Bifele de AZI devin "ieri"
-    const newYesterdayDone = Object.assign({}, state.done || {});
-    const newYesterdayKey  = state.todayKey || getTodayKey();
+    // yesterdayDone si yesterdayKey nu se ating — sunt gestionate doar de panoul "ieri"
+    const keptYD = state.yesterdayDone || {};
+    const keptYK = state.yesterdayKey  || '';
     state.done={}; state.bonus1Given=false; state.bonus2Given=false;
     state.todayKey=getTodayKey();
     state.dailyCounts={};
     state.spentToday=0;
     state.penaltiesApplied=[];
-    state.yesterdayDone = newYesterdayDone;
-    state.yesterdayKey  = newYesterdayKey;
+    state.yesterdayDone = keptYD;
+    state.yesterdayKey  = keptYK;
     if(!state.extraPoints) state.extraPoints=[];
     if(state.weekKey!==getWeekKey()){state.weekKey=getWeekKey();state.weeklyCounts={};}
     if(carried>0) addHist('↩ Reset zi — reportat: '+carried+' stele',0);
@@ -1326,9 +1335,10 @@ function importBackup(input){
 let yesterdayPending = {}; // sarcini selectate in modal, inainte de salvare
 
 function openYesterdayModal(){
-  // Incarca bifele salvate DOAR daca se refera la aceeasi zi de "ieri" ca astazi
-  const yKey = getYesterdayKey();
-  if(state.yesterdayKey === yKey){
+  // "Ieri" derivat din todayKey-ul curent din state — mai fiabil decat Date.now()-86400000
+  const yKey = getPrevDayKey(state.todayKey);
+  // Incarca bifele salvate daca yesterdayKey coincide cu ziua de ieri
+  if(state.yesterdayKey && state.yesterdayKey === yKey && state.yesterdayDone){
     yesterdayPending = Object.assign({}, state.yesterdayDone);
   } else {
     yesterdayPending = {};
@@ -1366,8 +1376,8 @@ function unlockYesterday(){
 
 function renderYesterdayTasks(){
   const allTasks = [...TASKS1, ...TASKS2];
-  const yKey = getYesterdayKey();
-  const alreadyUsed = state.yesterdayKey === yKey; // panoul a mai fost deschis pentru aceeasi zi de ieri
+  const yKey = getPrevDayKey(state.todayKey);
+  const alreadyUsed = state.yesterdayKey === yKey;
 
   // Calculeaza bonusuri curente in pending
   const done1 = TASKS1.every(t=>yesterdayPending[t.id]);
@@ -1428,7 +1438,7 @@ function toggleYesterdayTask(id){
 }
 
 function saveYesterdayAndClose(){
-  const yKey = getYesterdayKey();
+  const yKey = getPrevDayKey(state.todayKey);
   const prevDone = state.yesterdayKey===yKey ? state.yesterdayDone : {};
   const yDate = formatYesterdayDate();
   const now = new Date();
