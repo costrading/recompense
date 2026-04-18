@@ -539,8 +539,9 @@ let state = {
   bonus2Given: false,
   penaltiesApplied: [],  // [{id, pts, time}] — penalizari aplicate azi
   extraPoints: [],       // [{text, pts, time, date}] — activitati libere cu puncte
-  yesterdayDone: {},     // {taskId: true} — sarcini bifate retroactiv pentru ziua anterioara
-  yesterdayKey: '',      // ce zi a fost "ieri" cand s-a folosit panoul
+  dailyHistory: {},      // {dateKey: {done:{}, bonus1:bool, bonus2:bool}} — istoric pe zile
+  yesterdayDone: {},     // DEPRECATED — pastrat doar pentru migrare
+  yesterdayKey: '',      // DEPRECATED — pastrat doar pentru migrare
   monthKey: getMonthKey(),
   todayKey: getTodayKey(),
   weekKey: getWeekKey(),
@@ -606,6 +607,15 @@ function applyLoadedState(s){
   if(!s.extraPoints) s.extraPoints=[];
   if(!s.yesterdayDone) s.yesterdayDone={};
   if(!s.yesterdayKey) s.yesterdayKey='';
+  if(!s.dailyHistory) s.dailyHistory={};
+  // Migrare date vechi din yesterdayDone/yesterdayKey -> dailyHistory
+  if(s.yesterdayKey && Object.keys(s.yesterdayDone||{}).length>0 && !s.dailyHistory[s.yesterdayKey]){
+    s.dailyHistory[s.yesterdayKey] = { done: Object.assign({}, s.yesterdayDone) };
+  }
+  // Salveaza bifele de AZI in dailyHistory (live, la fiecare incarcare)
+  if(s.todayKey && s.done && Object.keys(s.done).length>0){
+    s.dailyHistory[s.todayKey] = { done: Object.assign({}, s.done), bonus1: !!s.bonus1Given, bonus2: !!s.bonus2Given };
+  }
   if(s.history && s.history.length>200) s.history=s.history.slice(-200);
   state=s;
   updateUI();
@@ -864,7 +874,11 @@ function toggleTask(id){
     else if(b2) showToast('+'+task.pts+' stele + Bonus Comportament! Bravo!');
     else showToast('+'+task.pts+' stele! Bravo Eve!');
   }
-  save(); updateUI();
+  save();
+  // Salveaza bifele zilei curente in dailyHistory (pentru panoul "ieri" de maine)
+  if(!state.dailyHistory) state.dailyHistory={};
+  state.dailyHistory[state.todayKey] = { done: Object.assign({}, state.done), bonus1: !!state.bonus1Given, bonus2: !!state.bonus2Given };
+  updateUI();
 }
 
 function redeem(id){
@@ -1335,14 +1349,6 @@ function importBackup(input){
 let yesterdayPending = {}; // sarcini selectate in modal, inainte de salvare
 
 function openYesterdayModal(){
-  // "Ieri" derivat din todayKey-ul curent din state — mai fiabil decat Date.now()-86400000
-  const yKey = getPrevDayKey(state.todayKey);
-  // Incarca bifele salvate daca yesterdayKey coincide cu ziua de ieri
-  if(state.yesterdayKey && state.yesterdayKey === yKey && state.yesterdayDone){
-    yesterdayPending = Object.assign({}, state.yesterdayDone);
-  } else {
-    yesterdayPending = {};
-  }
   document.getElementById('yesterdayPwd').value='';
   document.getElementById('yesterdayPwdErr').classList.remove('show');
   document.getElementById('yesterdayPwd').classList.remove('err');
@@ -1366,7 +1372,12 @@ function unlockYesterday(){
     document.getElementById('yesterdayPwd').focus();
     return;
   }
-  // Arata sectiunea cu sarcini
+  // Cheia pentru ziua de ieri (ziua anterioara lui todayKey din state)
+  const yKey = getPrevDayKey(state.todayKey);
+  // Incarca din dailyHistory[yKey] — aceasta contine bifele salvate IERI (in timp real)
+  const savedYesterday = (state.dailyHistory && state.dailyHistory[yKey]) ? state.dailyHistory[yKey] : null;
+  yesterdayPending = savedYesterday ? Object.assign({}, savedYesterday.done || {}) : {};
+
   document.getElementById('yesterdayPwdSection').style.display='none';
   document.getElementById('yesterdayTaskSection').style.display='block';
   document.getElementById('yesterdayModalDesc').textContent=
@@ -1375,55 +1386,50 @@ function unlockYesterday(){
 }
 
 function renderYesterdayTasks(){
-  const allTasks = [...TASKS1, ...TASKS2];
   const yKey = getPrevDayKey(state.todayKey);
-  const alreadyUsed = state.yesterdayKey === yKey;
+  // Ce era deja salvat pentru ziua de ieri (inainte de aceasta sesiune de editare)
+  const savedYesterday = (state.dailyHistory && state.dailyHistory[yKey]) ? state.dailyHistory[yKey] : null;
+  const prevDone = savedYesterday ? (savedYesterday.done || {}) : {};
+  const prevBonus1Saved = savedYesterday ? !!savedYesterday.bonus1 : false;
+  const prevBonus2Saved = savedYesterday ? !!savedYesterday.bonus2 : false;
 
-  // Calculeaza bonusuri curente in pending
-  const done1 = TASKS1.every(t=>yesterdayPending[t.id]);
-  const done2 = TASKS2.every(t=>yesterdayPending[t.id]);
+  // Bonusuri bazate pe selectia curenta din modal
+  const pendingBonus1 = TASKS1.every(t=>yesterdayPending[t.id]);
+  const pendingBonus2 = TASKS2.every(t=>yesterdayPending[t.id]);
 
   let html = '';
 
   // Rutina
   html += `<div style="font-size:10px;font-weight:700;color:#3B6D11;letter-spacing:.05em;text-transform:uppercase;margin:4px 0 6px">Rutina zilnica</div>`;
   html += TASKS1.map(t=>{
-    const isDone = !!yesterdayPending[t.id];
-    const wasAlreadySaved = alreadyUsed && !!state.yesterdayDone[t.id];
-    return `<div class="yesterday-task-row${isDone?' done':''}" onclick="toggleYesterdayTask('${t.id}')">
-      <div class="task-dot">${isDone?'✓':''}</div>
-      <span class="task-text">${t.name}${wasAlreadySaved?' ✓':''}</span>
+    const isPending = !!yesterdayPending[t.id];
+    return `<div class="yesterday-task-row${isPending?' done':''}" onclick="toggleYesterdayTask('${t.id}')">
+      <div class="task-dot">${isPending?'✓':''}</div>
+      <span class="task-text">${t.name}</span>
       <span class="task-pts">+${t.pts}⭐</span>
     </div>`;
   }).join('');
 
-  // Bonus rutina indicator
-  html += `<div class="yesterday-bonus-strip b1${done1?' earned1':''}">
+  html += `<div class="yesterday-bonus-strip b1${pendingBonus1?' earned1':''}">
     <div style="flex:1;font-size:11px;font-weight:700;color:#27500A">🏆 Bonus Rutina</div>
-    <div style="font-size:11px;font-weight:700;color:${done1?'#3B6D11':'#aaa'}">${done1?'+'+BONUS1+' ⭐ obtinut!':'necesita toate ('+BONUS1+' ⭐)'}</div>
+    <div style="font-size:11px;font-weight:700;color:${pendingBonus1?'#3B6D11':'#aaa'}">${pendingBonus1?'+'+BONUS1+' ⭐ obtinut!':'necesita toate ('+BONUS1+' ⭐)'}</div>
   </div>`;
 
   // Comportament
   html += `<div style="font-size:10px;font-weight:700;color:#3C3489;letter-spacing:.05em;text-transform:uppercase;margin:10px 0 6px">Comportament</div>`;
   html += TASKS2.map(t=>{
-    const isDone = !!yesterdayPending[t.id];
-    const wasAlreadySaved = alreadyUsed && !!state.yesterdayDone[t.id];
-    return `<div class="yesterday-task-row${isDone?' done':''}" onclick="toggleYesterdayTask('${t.id}')">
-      <div class="task-dot">${isDone?'✓':''}</div>
-      <span class="task-text">${t.name}${wasAlreadySaved?' ✓':''}</span>
+    const isPending = !!yesterdayPending[t.id];
+    return `<div class="yesterday-task-row${isPending?' done':''}" onclick="toggleYesterdayTask('${t.id}')">
+      <div class="task-dot">${isPending?'✓':''}</div>
+      <span class="task-text">${t.name}</span>
       <span class="task-pts">+${t.pts}⭐</span>
     </div>`;
   }).join('');
 
-  // Bonus comportament indicator
-  html += `<div class="yesterday-bonus-strip b2${done2?' earned2':''}">
+  html += `<div class="yesterday-bonus-strip b2${pendingBonus2?' earned2':''}">
     <div style="flex:1;font-size:11px;font-weight:700;color:#3C3489">🏆 Bonus Comportament</div>
-    <div style="font-size:11px;font-weight:700;color:${done2?'#534AB7':'#aaa'}">${done2?'+'+BONUS2+' ⭐ obtinut!':'necesita toate ('+BONUS2+' ⭐)'}</div>
+    <div style="font-size:11px;font-weight:700;color:${pendingBonus2?'#534AB7':'#aaa'}">${pendingBonus2?'+'+BONUS2+' ⭐ obtinut!':'necesita toate ('+BONUS2+' ⭐)'}</div>
   </div>`;
-
-  if(alreadyUsed){
-    html += `<div style="font-size:10px;color:#E67E22;margin-top:8px;text-align:center">⚠️ Ai mai editat ieri — doar sarcinile noi fata de salvarea anterioara vor adauga puncte.</div>`;
-  }
 
   document.getElementById('yesterdayTasksInner').innerHTML = html;
 }
@@ -1439,62 +1445,67 @@ function toggleYesterdayTask(id){
 
 function saveYesterdayAndClose(){
   const yKey = getPrevDayKey(state.todayKey);
-  const prevDone = state.yesterdayKey===yKey ? state.yesterdayDone : {};
   const yDate = formatYesterdayDate();
-  const now = new Date();
-  const timeStr = now.toLocaleDateString('ro-RO',{day:'numeric',month:'short'})+', '+
-                  now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
-  let totalAdded = 0;
+  // Ce era deja salvat pentru ziua de ieri
+  const savedYesterday = (state.dailyHistory && state.dailyHistory[yKey]) ? state.dailyHistory[yKey] : null;
+  const prevDone = savedYesterday ? (savedYesterday.done || {}) : {};
+  const prevBonus1 = savedYesterday ? !!savedYesterday.bonus1 : false;
+  const prevBonus2 = savedYesterday ? !!savedYesterday.bonus2 : false;
 
-  // Adauga puncte doar pentru sarcini NOI bifate (care nu erau in salvarea anterioara)
+  let totalAdded = 0;
   const allTasks = [...TASKS1,...TASKS2];
+
+  // Adauga/scade puncte doar pentru diferente fata de ce era salvat
   allTasks.forEach(t=>{
     if(yesterdayPending[t.id] && !prevDone[t.id]){
-      state.stars += t.pts;
-      state.earnedMonth += t.pts;
-      totalAdded += t.pts;
-      addHist(`[Ieri — ${yDate}] ${t.name}`, t.pts);
+      state.stars += t.pts; state.earnedMonth += t.pts; totalAdded += t.pts;
+      addHist(`[Ieri \u2014 ${yDate}] ${t.name}`, t.pts);
     }
-    // Daca a debifat ceva ce era deja salvat — scadem
     if(!yesterdayPending[t.id] && prevDone[t.id]){
       state.stars = Math.max(0, state.stars - t.pts);
       state.earnedMonth = Math.max(0, state.earnedMonth - t.pts);
       totalAdded -= t.pts;
-      addHist(`[Ieri — ${yDate}] Anulat: ${t.name}`, -t.pts);
+      addHist(`[Ieri \u2014 ${yDate}] Anulat: ${t.name}`, -t.pts);
     }
   });
 
-  // Verifica bonusuri
-  const prevBonus1 = TASKS1.every(t=>prevDone[t.id]);
-  const newBonus1  = TASKS1.every(t=>yesterdayPending[t.id]);
+  const newBonus1 = TASKS1.every(t=>yesterdayPending[t.id]);
+  const newBonus2 = TASKS2.every(t=>yesterdayPending[t.id]);
+
   if(newBonus1 && !prevBonus1){
     state.stars += BONUS1; state.earnedMonth += BONUS1; totalAdded += BONUS1;
-    addHist(`[Ieri — ${yDate}] Bonus Rutina zilnica!`, BONUS1);
+    addHist(`[Ieri \u2014 ${yDate}] Bonus Rutina!`, BONUS1);
   } else if(!newBonus1 && prevBonus1){
-    state.stars = Math.max(0, state.stars-BONUS1); state.earnedMonth = Math.max(0,state.earnedMonth-BONUS1); totalAdded -= BONUS1;
-    addHist(`[Ieri — ${yDate}] Bonus Rutina anulat`, -BONUS1);
+    state.stars = Math.max(0, state.stars-BONUS1);
+    state.earnedMonth = Math.max(0, state.earnedMonth-BONUS1);
+    totalAdded -= BONUS1;
+    addHist(`[Ieri \u2014 ${yDate}] Bonus Rutina anulat`, -BONUS1);
   }
-
-  const prevBonus2 = TASKS2.every(t=>prevDone[t.id]);
-  const newBonus2  = TASKS2.every(t=>yesterdayPending[t.id]);
   if(newBonus2 && !prevBonus2){
     state.stars += BONUS2; state.earnedMonth += BONUS2; totalAdded += BONUS2;
-    addHist(`[Ieri — ${yDate}] Bonus Comportament!`, BONUS2);
+    addHist(`[Ieri \u2014 ${yDate}] Bonus Comportament!`, BONUS2);
   } else if(!newBonus2 && prevBonus2){
-    state.stars = Math.max(0, state.stars-BONUS2); state.earnedMonth = Math.max(0,state.earnedMonth-BONUS2); totalAdded -= BONUS2;
-    addHist(`[Ieri — ${yDate}] Bonus Comportament anulat`, -BONUS2);
+    state.stars = Math.max(0, state.stars-BONUS2);
+    state.earnedMonth = Math.max(0, state.earnedMonth-BONUS2);
+    totalAdded -= BONUS2;
+    addHist(`[Ieri \u2014 ${yDate}] Bonus Comportament anulat`, -BONUS2);
   }
 
-  // Salveaza starea de ieri
+  // Salveaza noua stare in dailyHistory[yKey]
+  if(!state.dailyHistory) state.dailyHistory={};
+  state.dailyHistory[yKey] = { done: Object.assign({}, yesterdayPending), bonus1: newBonus1, bonus2: newBonus2 };
+  // Pastreaza compatibilitate cu campurile vechi
   state.yesterdayDone = Object.assign({}, yesterdayPending);
   state.yesterdayKey = yKey;
 
   closeYesterdayModal();
-  if(totalAdded>0) showToast(`+${totalAdded} stele adaugate pentru ieri! ⭐`);
+  if(totalAdded>0) showToast(`+${totalAdded} stele adaugate pentru ieri! \u2b50`);
   else if(totalAdded<0) showToast(`${totalAdded} stele ajustate pentru ieri`);
   else showToast('Nicio modificare.');
   save(); updateUI();
 }
+
+
 
 function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>{
