@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stelutele lui Eve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='g' cx='42%25' cy='35%25' r='60%25'%3E%3Cstop offset='0%25' stop-color='%23FFE87A'/%3E%3Cstop offset='45%25' stop-color='%23FFD020'/%3E%3Cstop offset='100%25' stop-color='%23E8960A'/%3E%3C/radialGradient%3E%3CradialGradient id='gs' cx='50%25' cy='50%25' r='50%25'%3E%3Cstop offset='0%25' stop-color='%23C97800'/%3E%3Cstop offset='100%25' stop-color='%23A05A00'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpath d='M50 22C51 22 52 23 53 25L57 42C58 44 59 45 61 45L78 45C80 45 81 46 82 48C83 50 82 52 80 53L66 63C64 64 63 66 64 68L69 85C70 87 69 89 67 90C65 91 63 90 62 89L50 79C48 78 46 78 44 79L32 89C31 90 29 91 27 90C25 89 24 87 25 85L30 68C31 66 30 64 28 63L14 53C12 52 11 50 12 48C13 46 14 45 16 45L33 45C35 45 36 44 37 42L41 25C42 23 43 22 44 22C46 22 49 22 50 22Z' fill='url(%23gs)' transform='translate(2,3)'/%3E%3Cpath d='M50 22C51 22 52 23 53 25L57 42C58 44 59 45 61 45L78 45C80 45 81 46 82 48C83 50 82 52 80 53L66 63C64 64 63 66 64 68L69 85C70 87 69 89 67 90C65 91 63 90 62 89L50 79C48 78 46 78 44 79L32 89C31 90 29 91 27 90C25 89 24 87 25 85L30 68C31 66 30 64 28 63L14 53C12 52 11 50 12 48C13 46 14 45 16 45L33 45C35 45 36 44 37 42L41 25C42 23 43 22 44 22C46 22 49 22 50 22Z' fill='url(%23g)'/%3E%3Cellipse cx='41' cy='57' rx='6' ry='4' fill='%23FF8C5A' opacity='0.55'/%3E%3Cellipse cx='59' cy='57' rx='6' ry='4' fill='%23FF8C5A' opacity='0.55'/%3E%3Cpath d='M41 51Q44 47 47 51' fill='none' stroke='%233C2000' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M53 51Q56 47 59 51' fill='none' stroke='%233C2000' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M40 58Q50 68 60 58' fill='none' stroke='%233C2000' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M44 28C46 24 50 23 53 26L57 42C44 28 44 28 44 28Z' fill='white' opacity='0.25'/%3E%3C/svg%3E">
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -214,8 +217,41 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="app">
 
   <div class="header">
-    <div class="avatar">&#11088;</div>
-    <div class="child-name">Stelutele lui Eve</div>
+    <div class="avatar" style="width:72px;height:72px;background:none;overflow:visible;">
+      <svg viewBox="0 0 100 115" width="72" height="72" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="hg" cx="42%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#FFE87A"/>
+            <stop offset="45%" stop-color="#FFD020"/>
+            <stop offset="100%" stop-color="#E8960A"/>
+          </radialGradient>
+          <radialGradient id="hgs" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#C97800"/>
+            <stop offset="100%" stop-color="#A05A00"/>
+          </radialGradient>
+          <radialGradient id="hgb" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFE030" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#FFE030" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="hck" cx="50%" cy="40%" r="55%">
+            <stop offset="0%" stop-color="#FF8C5A" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="#FF6030" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="50" cy="57" r="46" fill="url(#hgb)"/>
+        <path d="M50 18C51 18 53 19 54 22L59 43C60 46 62 48 65 48L86 48C89 48 91 50 92 52C93 55 91 58 89 59L71 71C68 73 67 76 68 79L74 100C75 103 73 106 71 107C69 108 66 107 64 106L50 96C47 95 43 95 40 96L26 106C24 107 21 108 19 107C17 106 15 103 16 100L22 79C23 76 22 73 19 71L1 59C-1 58 -3 55 -2 52C-1 50 1 48 4 48L25 48C28 48 30 46 31 43L36 22C37 19 39 18 40 18C42 18 48 18 50 18Z" fill="url(#hgs)" transform="translate(2,3)"/>
+        <path d="M50 18C51 18 53 19 54 22L59 43C60 46 62 48 65 48L86 48C89 48 91 50 92 52C93 55 91 58 89 59L71 71C68 73 67 76 68 79L74 100C75 103 73 106 71 107C69 108 66 107 64 106L50 96C47 95 43 95 40 96L26 106C24 107 21 108 19 107C17 106 15 103 16 100L22 79C23 76 22 73 19 71L1 59C-1 58 -3 55 -2 52C-1 50 1 48 4 48L25 48C28 48 30 46 31 43L36 22C37 19 39 18 40 18C42 18 48 18 50 18Z" fill="url(#hg)"/>
+        <path d="M44 24C46 19 50 18 54 21L59 43C46 28 44 24 44 24Z" fill="white" opacity="0.26"/>
+        <ellipse cx="36" cy="75" rx="8" ry="5" fill="url(#hck)"/>
+        <ellipse cx="64" cy="75" rx="8" ry="5" fill="url(#hck)"/>
+        <path d="M33 66Q38 59 43 66" fill="none" stroke="#3C2000" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M57 66Q62 59 67 66" fill="none" stroke="#3C2000" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M32 76Q50 94 68 76" fill="none" stroke="#3C2000" stroke-width="2.8" stroke-linecap="round"/>
+        <g transform="translate(12,20) rotate(10)"><path d="M0,-7 L1.1,-1.1 L7,0 L1.1,1.1 L0,7 L-1.1,1.1 L-7,0 L-1.1,-1.1 Z" fill="#FFE566"/></g>
+        <g transform="translate(88,18) rotate(-12)"><path d="M0,-5 L0.8,-0.8 L5,0 L0.8,0.8 L0,5 L-0.8,0.8 L-5,0 L-0.8,-0.8 Z" fill="#FFE566"/></g>
+      </svg>
+    </div>
+    <div class="child-name" style="font-family:'Nunito',cursive,sans-serif;font-size:16px;font-weight:800;color:#534AB7;letter-spacing:0.2px;">Stelutele lui Eve</div>
     <div class="star-num" id="totalStars">0</div>
     <div style="font-size:12px;color:#aaa;margin-bottom:4px">stele acumulate (se reporteaza mereu &#8594;)</div>
     <div class="money-pill" id="moneyPill">= 0.00 RON</div>
